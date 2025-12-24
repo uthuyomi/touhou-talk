@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 東方キャラ会話チャットUI（試作）
 
-## Getting Started
+本リポジトリは、**東方Projectのキャラクターを題材とした二次創作**として制作した  
+キャラクター会話用チャットUIの試作です。
 
-First, run the development server:
+キャラクターを切り替えても、それぞれの会話履歴は保持され、  
+スマートフォン／タブレットにも対応しています。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Demo
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Vercel 上で動作するデモを公開しています。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+https://touhou-talk.vercel.app/
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 特徴
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 東方キャラごとに会話履歴を保持
+- キャラ切り替え時も会話が途切れない設計
+- スマートフォン / タブレット対応UI
+- Next.js App Router 構成
+- UI と状態管理を分離した構成
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 技術スタック
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Next.js（App Router）
+- TypeScript
+- Tailwind CSS
+- Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 二次創作に関する注意
+
+本リポジトリは **東方Projectの二次創作**です。  
+原作・原作者様とは一切関係ありません。
+
+登場キャラクターおよび世界観は  
+上海アリス幻樂団様の作品を原典としています。
+
+---
+
+## 補足
+
+本プロジェクトは UI / 状態管理設計の検証を目的とした試作です。  
+商用利用や原作を誤認させる用途を意図したものではありません。
+
+---
+
+## License
+
+MIT
