@@ -52,6 +52,24 @@ https://touhou-talk.vercel.app/
 
 ---
 
-## License
+## MIT License
 
-MIT
+Copyright (c) 2025 uthuyomi
+
+本プロジェクトは MIT License のもとで公開されています。
+二次創作および権利表記について
+本プロジェクトは 『東方Project』を原作とした二次創作作品です。
+『東方Project』に関連するキャラクター名、世界観、設定等の著作権は、上海アリス幻樂団に帰属します。
+本リポジトリに含まれる ソースコード、UIデザイン、アプリケーション構造、および実装内容は、作者によるオリジナルの創作物であり、MIT License のもとで公開されています。
+本プロジェクトは 非公式・非営利のファン作品であり、上海アリス幻樂団とは一切関係ありません。
+
+Copyright (c) 2025 uthuyomi
+
+This project is released under the MIT License.
+Notes on Copyright and Fan Work
+This project is a fan-made derivative work (二次創作) based on Touhou Project.
+All characters, names, and settings related to Touhou Project are the property of 上海アリス幻樂団 (Team Shanghai Alice).
+The source code, UI design, application structure, and implementation are original works created by the author of this repository and are licensed under the MIT License.
+This project is non-commercial and is not affiliated with or endorsed by Team Shanghai Alice.
+
+
