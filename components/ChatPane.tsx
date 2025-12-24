@@ -33,17 +33,16 @@ type Character = {
    Props
 ========================= */
 
-/**
- * ChatLayout から渡される
- * - messages      : 現在キャラの履歴
- * - onSend        : ユーザー発言追加
- * - onAiMessage   : AI発言追加
- */
 type Props = {
   character: Character;
   messages: Message[];
   onSend: (content: string) => void;
   onAiMessage: (content: string) => void;
+
+  /**
+   * モバイル用：キャラパネルを開く
+   */
+  onOpenPanel: () => void;
 };
 
 /* =========================
@@ -55,6 +54,7 @@ export default function ChatPane({
   messages,
   onSend,
   onAiMessage,
+  onOpenPanel,
 }: Props) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -68,16 +68,12 @@ export default function ChatPane({
 
     const content = input;
 
-    // ① UI即応：ユーザー発言を ChatLayout 側に追加
+    // UI即応
     onSend(content);
     setInput("");
     setIsLoading(true);
 
     try {
-      /**
-       * ② API Route (/api/chat) に送信
-       * ChatLayout が持っている messages をそのまま使用
-       */
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -89,23 +85,16 @@ export default function ChatPane({
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("API request failed");
-      }
+      if (!res.ok) throw new Error("API request failed");
 
-      /**
-       * ③ AI の返答を取得
-       */
       const aiReply = (await res.json()) as {
         role: "ai";
         content: string;
       };
 
-      // ④ AI発言を ChatLayout 側に追加
       onAiMessage(aiReply.content);
     } catch (error) {
       console.error("[ChatPane] API Error:", error);
-
       onAiMessage("……少し調子が悪いみたい。また後で話しかけて。");
     } finally {
       setIsLoading(false);
@@ -125,8 +114,11 @@ export default function ChatPane({
         />
       )}
 
-      {/* ヘッダー */}
+      {/* =========================
+          ヘッダー
+         ========================= */}
       <header className="relative overflow-hidden border-b border-white/10 px-6 py-4 backdrop-blur-md">
+        {/* キャラアクセント背景 */}
         {character.color?.accent && (
           <div
             className={cn(
@@ -136,13 +128,33 @@ export default function ChatPane({
           />
         )}
 
-        <div>
+        {/* トグルボタン（右上・最前面） */}
+        <button
+          onClick={onOpenPanel}
+          className="
+            lg:hidden
+            absolute right-4 top-4
+            z-50
+            rounded-lg
+            px-2 py-1
+            text-white/80
+            hover:bg-white/10
+          "
+          aria-label="Open character panel"
+        >
+          ☰
+        </button>
+
+        {/* タイトル（右側に余白確保） */}
+        <div className="pr-10">
           <h2 className="font-gensou text-lg text-white">{character.name}</h2>
           <p className="text-xs text-white/50">{character.title}</p>
         </div>
       </header>
 
-      {/* チャットエリア */}
+      {/* =========================
+          チャットエリア
+         ========================= */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
         {messages.map((msg) => {
           const isUser = msg.role === "user";
@@ -170,7 +182,9 @@ export default function ChatPane({
         })}
       </div>
 
-      {/* 入力欄 */}
+      {/* =========================
+          入力欄
+         ========================= */}
       <footer className="border-t border-white/10 px-6 py-4 backdrop-blur-md">
         <div className="flex items-end gap-3">
           <textarea
