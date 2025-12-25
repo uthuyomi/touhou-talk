@@ -21,9 +21,6 @@ type Character = {
     chatBackground?: string | null;
     placeholder: string;
   };
-  system: {
-    initialMessage: string;
-  };
   color?: {
     accent?: string;
   };

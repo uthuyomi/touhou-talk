@@ -10,7 +10,6 @@ type CharacterId = keyof typeof characters;
 
 /**
  * Message 型
- * ChatPane と共有
  */
 type Message = {
   id: string;
@@ -27,7 +26,6 @@ export default function ChatLayout() {
 
   /**
    * モバイル用：キャラパネル開閉
-   * ※ PC では常に open 扱い
    */
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -35,19 +33,14 @@ export default function ChatLayout() {
 
   /**
    * キャラ別の会話履歴
+   * 👉 初期状態は「完全に空」
    */
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
     () => {
       const initial: Record<string, Message[]> = {};
 
       Object.values(characters).forEach((char) => {
-        initial[char.id] = [
-          {
-            id: "init",
-            role: "ai",
-            content: char.system.initialMessage,
-          },
-        ];
+        initial[char.id] = [];
       });
 
       return initial;
@@ -112,13 +105,12 @@ export default function ChatLayout() {
           isPanelOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* ※ CharacterPanel の幅・中身は一切変更しない */}
         <CharacterPanel
           characters={characters}
           activeId={activeCharacterId}
           onSelect={(id) => {
             setActiveCharacterId(id as CharacterId);
-            setIsPanelOpen(false); // 選択後に閉じる
+            setIsPanelOpen(false);
           }}
         />
       </div>
@@ -150,7 +142,7 @@ export default function ChatLayout() {
         messages={messages}
         onSend={sendMessage}
         onAiMessage={appendAiMessage}
-        onOpenPanel={() => setIsPanelOpen(true)} // ← モバイル用トグル
+        onOpenPanel={() => setIsPanelOpen(true)}
       />
     </div>
   );
