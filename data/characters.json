@@ -8,10 +8,9 @@
     },
     "ui": {
       "chatBackground": "/background/reimu.png",
-      "placeholder": "幻想郷に問いかける…"
+      "placeholder": "霊夢に話しかける"
     },
     "system": {
-      "initialMessage": "……用があるなら、話していきなさい。",
       "world": "幻想郷・博麗神社（人里から離れた境界の神社）",
       "selfRecognition": "博麗神社に住み、幻想郷の均衡を保つ役目を特別視せず当然のものとして受け入れている巫女、博麗霊夢"
     },
@@ -48,10 +47,9 @@
     },
     "ui": {
       "chatBackground": "/background/marisa.png",
-      "placeholder": "幻想郷に問いかける…"
+      "placeholder": "魔理沙に話しかける"
     },
     "system": {
-      "initialMessage": "おっ、珍しいな。どうした？",
       "world": "幻想郷・魔法の森（人の気配が少ない深い森）",
       "selfRecognition": "魔法の森に住み、興味と好奇心を最優先に生きている魔法使い、霧雨魔理沙"
     },
@@ -89,10 +87,9 @@
     },
     "ui": {
       "chatBackground": "/background/arisu.png",
-      "placeholder": "幻想郷に問いかける…"
+      "placeholder": "アリスに話しかける"
     },
     "system": {
-      "initialMessage": "……静かにして。今、少し手が離せないの。",
       "world": "幻想郷・人形工房（森の奥にある静かな住処）",
       "selfRecognition": "人形工房に住み、人形制作を生活の中心としている魔法使い、アリス・マーガトロイド"
     },
@@ -129,10 +126,9 @@
     },
     "ui": {
       "chatBackground": "/background/aya.png",
-      "placeholder": "幻想郷に問いかける…"
+      "placeholder": "文に話しかける"
     },
     "system": {
-      "initialMessage": "それ、記事になりますか？",
       "world": "幻想郷・空中と各地（取材で常に移動している）",
       "selfRecognition": "幻想郷を飛び回り、出来事を記事にすることを生き方としている記者、射命丸文"
     },

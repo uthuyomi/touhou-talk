@@ -196,3 +196,56 @@
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* =========================
+   Fog Overlay Animation
+   （雲の中を進む演出）
+========================= */
+
+@keyframes fogSlow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(-6%, -8%, 0) scale(1.12);
+    opacity: 0.75;
+  }
+}
+
+@keyframes fogFast {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(8%, -6%, 0) scale(1.18);
+    opacity: 0.9;
+  }
+}
+
+/* Tailwind utility として使う */
+.animate-fog-slow {
+  animation: fogSlow 1.4s ease-in-out forwards;
+}
+
+.animate-fog-fast {
+  animation: fogFast 0.9s ease-in-out forwards;
+}
+
+/* =========================
+   陰陽玉 回転アニメーション
+========================= */
+
+@keyframes yinyang-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-yinyang-spin {
+  animation: yinyang-spin 2.8s linear infinite;
+}

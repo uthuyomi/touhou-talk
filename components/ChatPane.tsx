@@ -156,30 +156,32 @@ export default function ChatPane({
           チャットエリア
          ========================= */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
-        {messages.map((msg) => {
-          const isUser = msg.role === "user";
+        {messages
+          .filter((msg) => msg.id !== "init") // ← 初期チャット文言を除外
+          .map((msg) => {
+            const isUser = msg.role === "user";
 
-          return (
-            <div
-              key={msg.id}
-              className={cn(
-                "flex w-full",
-                isUser ? "justify-end" : "justify-start"
-              )}
-            >
+            return (
               <div
+                key={msg.id}
                 className={cn(
-                  "gensou-card max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  isUser
-                    ? "chat-user rounded-br-none"
-                    : "chat-ai rounded-bl-none"
+                  "flex w-full",
+                  isUser ? "justify-end" : "justify-start"
                 )}
               >
-                {msg.content}
+                <div
+                  className={cn(
+                    "gensou-card max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                    isUser
+                      ? "chat-user rounded-br-none"
+                      : "chat-ai rounded-bl-none"
+                  )}
+                >
+                  {msg.content}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {/* =========================
