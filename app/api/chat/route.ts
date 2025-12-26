@@ -8,75 +8,44 @@
  * - 会話履歴
  * を受け取り、
  *
- * 1. characters.json から該当キャラを取得
- * 2. Chat 用の最小定義に変換
- * 3. lib/ai/chat.ts に処理を委譲
- * 4. GPT-5.2 の返答をそのまま返す
+ * 1. 最新のユーザー発言を抽出
+ * 2. Persona OS API に中継
+ * 3. 返ってきた応答をそのまま返す
  *
  * ⚠️ このファイルでは：
  * - 人格プロンプトは組み立てない
- * - OpenAI API を直接触らない
+ * - LLM / OpenAI API を直接触らない
  * - 会話状態・記憶は一切保持しない
  *
  * あくまで「API の窓口」専用レイヤー
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import characters from "@/data/characters.json";
-import {
-  chatWithCharacter,
-  ChatMessage,
-  CharacterForChat,
-} from "@/lib/ai/chat";
 
 /* =========================
-   内部型定義
-   - characters.json のうち
-     Chat に必要な部分のみ
+   Persona OS API 設定
 ========================= */
 
 /**
- * characters.json の Chat 用最低構造
- * ※ UI 情報（色・背景）は含めない
+ * Persona OS 側の /chat エンドポイント
+ * - 本番：Fly.io
+ * - 開発：localhost
  */
-type CharacterJsonForChat = {
-  id: string;
-  name: string;
-  title: string;
-  prompt: {
-    persona: string[];
-    speech: string[];
-    constraints: string[];
-  };
-};
-
-type CharactersJsonMap = Record<string, CharacterJsonForChat>;
+const PERSONA_OS_ENDPOINT =
+  process.env.PERSONA_OS_URL ?? "http://127.0.0.1:8000/chat";
 
 /* =========================
-   型ガード
-   - JSON を unknown から安全に扱う
+   型定義
 ========================= */
 
-function isCharacterJsonForChat(value: unknown): value is CharacterJsonForChat {
-  if (typeof value !== "object" || value === null) return false;
+type ChatMessage = {
+  role: "user" | "ai";
+  content: string;
+};
 
-  const v = value as Record<string, unknown>;
-  const p = v.prompt as Record<string, unknown> | undefined;
-
-  const isStringArray = (x: unknown): x is string[] =>
-    Array.isArray(x) && x.every((t) => typeof t === "string");
-
-  return (
-    typeof v.id === "string" &&
-    typeof v.name === "string" &&
-    typeof v.title === "string" &&
-    typeof p === "object" &&
-    p !== null &&
-    isStringArray(p.persona) &&
-    isStringArray(p.speech) &&
-    isStringArray(p.constraints)
-  );
-}
+type PersonaOsResponse = {
+  reply: string;
+};
 
 /* =========================
    POST Handler
@@ -90,6 +59,12 @@ function isCharacterJsonForChat(value: unknown): value is CharacterJsonForChat {
  *   characterId: string,
  *   messages: { role: "user" | "ai", content: string }[]
  * }
+ *
+ * 返す JSON：
+ * {
+ *   role: "ai",
+ *   content: string
+ * }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -97,7 +72,6 @@ export async function POST(req: NextRequest) {
        ① リクエストボディ取得
     ========================= */
 
-    // NextRequest.json() は async
     const body = await req.json();
 
     const {
@@ -110,7 +84,6 @@ export async function POST(req: NextRequest) {
 
     /* =========================
        ② 入力バリデーション
-       - 最低限のみチェック
     ========================= */
 
     if (!characterId || !Array.isArray(messages)) {
@@ -121,69 +94,56 @@ export async function POST(req: NextRequest) {
     }
 
     /* =========================
-       ③ キャラ定義取得
+       ③ 最新ユーザー発言の抽出
     ========================= */
 
-    /**
-     * characters.json は型が保証されないため
-     * unknown → 型ガードで安全に確認する
-     */
-    const characterMap = characters as unknown as CharactersJsonMap;
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((m) => m.role === "user");
 
-    const candidate: unknown = characterMap[characterId];
-
-    if (!isCharacterJsonForChat(candidate)) {
+    if (!lastUserMessage) {
       return NextResponse.json(
-        { error: "Character not found or invalid schema" },
-        { status: 404 }
+        { error: "No user message found" },
+        { status: 400 }
       );
     }
 
     /* =========================
-       ④ Chat 用定義へ変換
+       ④ Persona OS API に中継
     ========================= */
 
-    /**
-     * UI 情報・余分な設定は完全に切り捨てる
-     * chat.ts は「人格と会話」だけを見る
-     */
-    const characterForChat: CharacterForChat = {
-      id: candidate.id,
-      name: candidate.name,
-      title: candidate.title,
-      system: {
-        // buildPrompt.ts 側で使用
-        world: "幻想郷",
-        selfRecognition: `${candidate.name}として振る舞う`,
+    const personaResponse = await fetch(PERSONA_OS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      prompt: {
-        persona: candidate.prompt.persona,
-        speech: candidate.prompt.speech,
-        constraints: candidate.prompt.constraints,
-      },
-    };
+      body: JSON.stringify({
+        // 将来：Cookie / localStorage / userId から差し替え可能
+        session_id: "frontend-session",
+        character_id: characterId,
+        text: lastUserMessage.content,
+      }),
+    });
+
+    if (!personaResponse.ok) {
+      const text = await personaResponse.text();
+      console.error("[Persona OS Error]", text);
+      throw new Error("Persona OS API request failed");
+    }
+
+    const personaJson = (await personaResponse.json()) as PersonaOsResponse;
 
     /* =========================
-       ⑤ GPT 呼び出し委譲
-    ========================= */
-
-    /**
-     * OpenAI API は必ず chat.ts 経由
-     * このファイルでは触らない
-     */
-    const reply = await chatWithCharacter(characterForChat, messages);
-
-    /* =========================
-       ⑥ レスポンス返却
+       ⑤ FE 互換形式で返却
     ========================= */
 
     return NextResponse.json({
       role: "ai",
-      content: reply,
+      content: personaJson.reply,
     });
   } catch (error) {
     /* =========================
-       ⑦ エラーハンドリング
+       ⑥ エラーハンドリング
     ========================= */
 
     console.error("[/api/chat] Error:", error);
