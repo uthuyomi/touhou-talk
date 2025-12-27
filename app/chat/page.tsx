@@ -1,132 +1,19 @@
 // app/chat/page.tsx
-"use client";
+import { Suspense } from "react";
+import ChatClient from "./ChatClient";
 
-/**
- * /chat は URL クエリ依存・ユーザー操作前提のため
- * 静的プリレンダリングを明示的に禁止
- */
 export const dynamic = "force-dynamic";
 
-import { useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
-import ChatPane from "@/components/ChatPane";
-import CharacterPanel from "@/components/CharacterPanel";
-import { CHARACTERS } from "@/data/characters";
-
-/* =========================
-   Types
-========================= */
-
-type Message = {
-  id: string;
-  role: "user" | "ai";
-  content: string;
-};
-
 export default function ChatPage() {
-  const searchParams = useSearchParams();
-
-  /* =========================
-     URL params（client-only）
-  ========================= */
-
-  const currentLayer: string | null = searchParams.get("layer");
-  const currentLocationId: string | null = searchParams.get("loc");
-  const initialCharacterId: string | null = searchParams.get("char");
-
-  /* =========================
-     キャラ選択 state
-  ========================= */
-
-  const [activeCharacterId, setActiveCharacterId] = useState<string | null>(
-    () =>
-      initialCharacterId && CHARACTERS[initialCharacterId]
-        ? initialCharacterId
-        : null
-  );
-
-  /* =========================
-     メッセージ state
-  ========================= */
-
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "init",
-      role: "ai",
-      content: "……誰かが、こちらを見ている。",
-    },
-  ]);
-
-  /* =========================
-     activeCharacter 解決
-  ========================= */
-
-  const activeCharacter = useMemo(() => {
-    if (!activeCharacterId) return null;
-    return CHARACTERS[activeCharacterId] ?? null;
-  }, [activeCharacterId]);
-
-  /* =========================
-     メッセージ操作
-  ========================= */
-
-  const handleSend = useCallback((content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-      },
-    ]);
-  }, []);
-
-  const handleAiMessage = useCallback((content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role: "ai",
-        content,
-      },
-    ]);
-  }, []);
-
-  const handleOpenPanel = useCallback(() => {
-    // モバイル用：将来拡張
-  }, []);
-
-  /* ========================= */
-
   return (
-    <div className="relative flex h-dvh w-full overflow-hidden">
-      {/* =========================
-          キャラクター選択
-         ========================= */}
-      <CharacterPanel
-        characters={CHARACTERS}
-        activeId={activeCharacterId ?? ""}
-        onSelect={setActiveCharacterId}
-        currentLocationId={currentLocationId}
-        currentLayer={currentLayer}
-      />
-
-      {/* =========================
-          チャット本体
-         ========================= */}
-      {activeCharacter ? (
-        <ChatPane
-          character={activeCharacter}
-          messages={messages}
-          onSend={handleSend}
-          onAiMessage={handleAiMessage}
-          onOpenPanel={handleOpenPanel}
-        />
-      ) : (
-        <div className="flex flex-1 items-center justify-center text-white/40">
-          マップからキャラクターを選択してください
+    <Suspense
+      fallback={
+        <div className="flex h-dvh w-full items-center justify-center text-white/40">
+          読み込み中…
         </div>
-      )}
-    </div>
+      }
+    >
+      <ChatClient />
+    </Suspense>
   );
 }
