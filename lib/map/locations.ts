@@ -74,8 +74,8 @@ export const LOCATIONS: readonly MapLocation[] = [
   {
     id: "scarlet_mansion",
     layer: "gensokyo",
-    name: "紅魔館（湖畔・森の奥）",
-    pos: { x: 78, y: 36 },
+    name: "紅魔館",
+    pos: { x: 78, y: 16 },
     hitRadius: 3.8,
   },
   {

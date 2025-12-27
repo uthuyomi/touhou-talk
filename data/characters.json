@@ -82,5 +82,21 @@
       "chatBackground": "/background/youmu.png",
       "placeholder": "妖夢に話しかける"
     }
+  },
+  "remilia": {
+    "id": "remilia",
+    "name": "レミリア・スカーレット",
+    "title": "紅魔館の主",
+    "world": {
+      "map": "gensokyo",
+      "location": "scarlet_mansion"
+    },
+    "color": {
+      "accent": "from-rose-600/40 to-purple-700/20"
+    },
+    "ui": {
+      "chatBackground": "/background/remilia.png",
+      "placeholder": "レミリアに話しかける"
+    }
   }
 }
