@@ -40,7 +40,7 @@ export const LOCATIONS: readonly MapLocation[] = [
     id: "hakurei_shrine",
     layer: "gensokyo",
     name: "博麗神社",
-    pos: { x: 18, y: 38 },
+    pos: { x: 30, y: 20 },
     hitRadius: 3.2,
   },
   {

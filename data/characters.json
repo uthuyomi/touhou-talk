@@ -3,6 +3,10 @@
     "id": "reimu",
     "name": "博麗 霊夢",
     "title": "楽園の巫女",
+    "world": {
+      "map": "gensokyo",
+      "location": "hakurei_shrine"
+    },
     "color": {
       "accent": "from-red-500/40 to-pink-500/20"
     },
@@ -16,6 +20,10 @@
     "id": "marisa",
     "name": "霧雨 魔理沙",
     "title": "普通の魔法使い",
+    "world": {
+      "map": "gensokyo",
+      "location": "forest_of_magic"
+    },
     "color": {
       "accent": "from-yellow-400/40 to-orange-500/20"
     },
@@ -29,6 +37,10 @@
     "id": "alice",
     "name": "アリス・マーガトロイド",
     "title": "七色の人形遣い",
+    "world": {
+      "map": "gensokyo",
+      "location": "forest_of_magic"
+    },
     "color": {
       "accent": "from-indigo-400/40 to-purple-500/20"
     },
@@ -42,6 +54,10 @@
     "id": "aya",
     "name": "射命丸 文",
     "title": "幻想郷最速の記者",
+    "world": {
+      "map": "gensokyo",
+      "location": "youkai_mountain"
+    },
     "color": {
       "accent": "from-sky-400/40 to-cyan-500/20"
     },
@@ -55,6 +71,10 @@
     "id": "youmu",
     "name": "魂魄 妖夢",
     "title": "半人半霊の庭師",
+    "world": {
+      "map": "higan",
+      "location": "hakugyokurou"
+    },
     "color": {
       "accent": "from-emerald-500/40 to-teal-500/20"
     },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /* =========================
@@ -35,10 +35,6 @@ type Props = {
   messages: Message[];
   onSend: (content: string) => void;
   onAiMessage: (content: string) => void;
-
-  /**
-   * モバイル用：キャラパネルを開く
-   */
   onOpenPanel: () => void;
 };
 
@@ -55,6 +51,19 @@ export default function ChatPane({
 }: Props) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /* =========================
+     textarea 自動リサイズ
+  ========================= */
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   /* =========================
      メッセージ送信
@@ -65,7 +74,6 @@ export default function ChatPane({
 
     const content = input;
 
-    // UI即応
     onSend(content);
     setInput("");
     setIsLoading(true);
@@ -73,9 +81,7 @@ export default function ChatPane({
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           characterId: character.id,
           messages: [...messages, { role: "user", content }],
@@ -100,7 +106,7 @@ export default function ChatPane({
 
   return (
     <main className="relative z-10 flex h-dvh flex-1 flex-col">
-      {/* キャラ別チャット背景 */}
+      {/* 背景 */}
       {character.ui.chatBackground && (
         <div
           className="absolute inset-0 -z-10 bg-cover bg-center"
@@ -114,8 +120,7 @@ export default function ChatPane({
       {/* =========================
           ヘッダー
          ========================= */}
-      <header className="relative overflow-hidden border-b border-white/10 px-6 py-4 backdrop-blur-md">
-        {/* キャラアクセント背景 */}
+      <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
         {character.color?.accent && (
           <div
             className={cn(
@@ -125,24 +130,13 @@ export default function ChatPane({
           />
         )}
 
-        {/* トグルボタン（右上・最前面） */}
         <button
           onClick={onOpenPanel}
-          className="
-            lg:hidden
-            absolute right-4 top-4
-            z-50
-            rounded-lg
-            px-2 py-1
-            text-white/80
-            hover:bg-white/10
-          "
-          aria-label="Open character panel"
+          className="lg:hidden absolute right-4 top-4 z-50 rounded-lg px-2 py-1 text-white/80 hover:bg-white/10"
         >
           ☰
         </button>
 
-        {/* タイトル（右側に余白確保） */}
         <div className="pr-10">
           <h2 className="font-gensou text-lg text-white">{character.name}</h2>
           <p className="text-xs text-white/50">{character.title}</p>
@@ -154,7 +148,7 @@ export default function ChatPane({
          ========================= */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
         {messages
-          .filter((msg) => msg.id !== "init") // ← 初期チャット文言を除外
+          .filter((msg) => msg.id !== "init")
           .map((msg) => {
             const isUser = msg.role === "user";
 
@@ -184,30 +178,55 @@ export default function ChatPane({
       {/* =========================
           入力欄
          ========================= */}
-      <footer className="border-t border-white/10 px-6 py-4 backdrop-blur-md">
-        <div className="flex items-end gap-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={character.ui.placeholder}
-            rows={1}
-            disabled={isLoading}
-            className="min-h-[44px] flex-1 resize-none rounded-xl bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-white/20 disabled:opacity-50"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-          />
+      <footer className="border-t border-white/10 backdrop-blur-md">
+        <div className="mx-auto max-w-3xl px-4 py-4">
+          <div className="flex items-end gap-3 rounded-2xl bg-black/40 p-3 shadow-lg">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={character.ui.placeholder}
+              disabled={isLoading}
+              rows={1}
+              className="
+                flex-1
+                resize-none
+                bg-transparent
+                px-3
+                py-2
+                text-sm
+                text-white
+                outline-none
+                placeholder:text-white/40
+              "
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+            />
 
-          <button
-            onClick={sendMessage}
-            disabled={isLoading}
-            className="rounded-xl bg-white/90 px-5 py-3 text-sm font-medium text-black transition hover:bg-white disabled:opacity-50"
-          >
-            送信
-          </button>
+            <button
+              onClick={sendMessage}
+              disabled={isLoading}
+              className="
+                shrink-0
+                rounded-xl
+                bg-white/90
+                px-5
+                py-2.5
+                text-sm
+                font-medium
+                text-black
+                transition
+                hover:bg-white
+                disabled:opacity-50
+              "
+            >
+              送信
+            </button>
+          </div>
         </div>
       </footer>
     </main>
