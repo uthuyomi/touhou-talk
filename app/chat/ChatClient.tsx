@@ -41,9 +41,17 @@ export default function ChatClient() {
 
   /* =========================
      モバイル用：パネル開閉
+     ★ 初期表示判定はここで完結させる
   ========================= */
 
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+
+    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
+
+    // スマホ & キャラ未選択なら最初から開く
+    return isMobile && !(initialCharacterId && CHARACTERS[initialCharacterId]);
+  });
 
   /* =========================
      メッセージ state
@@ -102,7 +110,7 @@ export default function ChatClient() {
           activeId={activeCharacterId ?? ""}
           onSelect={(id) => {
             setActiveCharacterId(id);
-            setIsPanelOpen(false); // ← 選択したら閉じる
+            setIsPanelOpen(false); // 選択したら閉じる
           }}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
@@ -139,7 +147,7 @@ export default function ChatClient() {
           messages={messages}
           onSend={handleSend}
           onAiMessage={handleAiMessage}
-          onOpenPanel={() => setIsPanelOpen(true)} // ← ★ここが本丸
+          onOpenPanel={() => setIsPanelOpen(true)} // ☰ ボタン
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-white/40">
