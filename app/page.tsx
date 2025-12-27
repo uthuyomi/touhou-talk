@@ -51,8 +51,17 @@ export default function TopPage() {
     setFog(true);
     setLoading(true);
 
+    // PC / Mobile 判定（Tailwind lg と同基準）
+    const isPC = window.matchMedia("(min-width: 1024px)").matches;
+
     setTimeout(() => {
-      router.push("/chat");
+      if (isPC) {
+        // PC → マップ
+        router.push("/map/gensokyo");
+      } else {
+        // スマホ・タブレット → 直接チャット
+        router.push("/chat");
+      }
     }, 1200); // 儀式時間
   };
 
@@ -122,7 +131,7 @@ export default function TopPage() {
             text-black
           "
         >
-          チャット画面
+          境界を越える
         </button>
       </div>
 

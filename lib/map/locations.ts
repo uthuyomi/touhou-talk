@@ -65,6 +65,13 @@ export const LOCATIONS: readonly MapLocation[] = [
     hitRadius: 4.0,
   },
   {
+    id: "youkai_mountain",
+    layer: "gensokyo",
+    name: "妖怪の山",
+    pos: { x: 45, y: 10 },
+    hitRadius: 4.0,
+  },
+  {
     id: "scarlet_mansion",
     layer: "gensokyo",
     name: "紅魔館（湖畔・森の奥）",

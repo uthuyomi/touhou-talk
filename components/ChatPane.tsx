@@ -1,3 +1,4 @@
+// components/ChatPane.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -33,8 +34,11 @@ type Character = {
 type Props = {
   character: Character;
   messages: Message[];
+
+  /** UI → Page に渡すのは文字列だけ */
   onSend: (content: string) => void;
   onAiMessage: (content: string) => void;
+
   onOpenPanel: () => void;
 };
 
@@ -73,10 +77,11 @@ export default function ChatPane({
     if (!input.trim() || isLoading) return;
 
     const content = input;
-
-    onSend(content);
     setInput("");
     setIsLoading(true);
+
+    // UI即反映（文字列）
+    onSend(content);
 
     try {
       const res = await fetch("/api/chat", {
@@ -95,6 +100,7 @@ export default function ChatPane({
         content: string;
       };
 
+      // AI応答も文字列で返す
       onAiMessage(aiReply.content);
     } catch (error) {
       console.error("[ChatPane] API Error:", error);
@@ -117,9 +123,7 @@ export default function ChatPane({
         />
       )}
 
-      {/* =========================
-          ヘッダー
-         ========================= */}
+      {/* ヘッダー */}
       <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
         {character.color?.accent && (
           <div
@@ -143,12 +147,10 @@ export default function ChatPane({
         </div>
       </header>
 
-      {/* =========================
-          チャットエリア
-         ========================= */}
+      {/* チャット */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
         {messages
-          .filter((msg) => msg.id !== "init")
+          .filter((m) => m.id !== "init")
           .map((msg) => {
             const isUser = msg.role === "user";
 
@@ -175,9 +177,7 @@ export default function ChatPane({
           })}
       </div>
 
-      {/* =========================
-          入力欄
-         ========================= */}
+      {/* 入力欄 */}
       <footer className="border-t border-white/10 backdrop-blur-md">
         <div className="mx-auto max-w-3xl px-4 py-4">
           <div className="flex items-end gap-3 rounded-2xl bg-black/40 p-3 shadow-lg">
@@ -188,17 +188,7 @@ export default function ChatPane({
               placeholder={character.ui.placeholder}
               disabled={isLoading}
               rows={1}
-              className="
-                flex-1
-                resize-none
-                bg-transparent
-                px-3
-                py-2
-                text-sm
-                text-white
-                outline-none
-                placeholder:text-white/40
-              "
+              className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-white/40"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -210,19 +200,7 @@ export default function ChatPane({
             <button
               onClick={sendMessage}
               disabled={isLoading}
-              className="
-                shrink-0
-                rounded-xl
-                bg-white/90
-                px-5
-                py-2.5
-                text-sm
-                font-medium
-                text-black
-                transition
-                hover:bg-white
-                disabled:opacity-50
-              "
+              className="shrink-0 rounded-xl bg-white/90 px-5 py-2.5 text-sm font-medium text-black transition hover:bg-white disabled:opacity-50"
             >
               送信
             </button>

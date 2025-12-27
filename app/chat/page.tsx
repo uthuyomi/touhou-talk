@@ -1,23 +1,122 @@
-import ChatLayout from "@/components/ChatLayout";
+// app/chat/page.tsx
+"use client";
 
-export default function HomePage() {
+import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import ChatPane from "@/components/ChatPane";
+import CharacterPanel from "@/components/CharacterPanel";
+import { CHARACTERS } from "@/data/characters";
+
+/* =========================
+   Types
+========================= */
+
+type Message = {
+  id: string;
+  role: "user" | "ai";
+  content: string;
+};
+
+export default function ChatPage() {
+  const searchParams = useSearchParams();
+
+  const layer = searchParams.get("layer") ?? undefined;
+  const currentLocationId = searchParams.get("loc") ?? undefined;
+  const initialCharacterId = searchParams.get("char");
+
+  /* =========================
+     キャラ選択 state
+  ========================= */
+
+  const [activeCharacterId, setActiveCharacterId] = useState<string | null>(
+    () =>
+      initialCharacterId && CHARACTERS[initialCharacterId]
+        ? initialCharacterId
+        : null
+  );
+
+  /* =========================
+     メッセージ state
+  ========================= */
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "init",
+      role: "ai",
+      content: "……誰かが、こちらを見ている。",
+    },
+  ]);
+
+  /* =========================
+     activeCharacter 解決
+  ========================= */
+
+  const activeCharacter = useMemo(() => {
+    if (!activeCharacterId) return null;
+    return CHARACTERS[activeCharacterId] ?? null;
+  }, [activeCharacterId]);
+
+  /* =========================
+     メッセージ操作
+  ========================= */
+
+  const handleSend = useCallback((content: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        role: "user",
+        content,
+      },
+    ]);
+  }, []);
+
+  const handleAiMessage = useCallback((content: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        role: "ai",
+        content,
+      },
+    ]);
+  }, []);
+
+  const handleOpenPanel = useCallback(() => {
+    // モバイル用：必要なら後で実装
+  }, []);
+
+  /* ========================= */
+
   return (
-    <div className="relative h-dvh w-full overflow-hidden">
-      {/* 背景：幻想郷 */}
-      <div
-        className="gensou-background"
-        style={{
-          backgroundImage: "url(/bg/gensokyo-shrine.jpg)",
-        }}
+    <div className="relative flex h-dvh w-full overflow-hidden">
+      {/* =========================
+          キャラクター選択
+         ========================= */}
+      <CharacterPanel
+        characters={CHARACTERS}
+        activeId={activeCharacterId ?? ""}
+        onSelect={setActiveCharacterId}
+        currentLocationId={currentLocationId}
+        currentLayer={layer ?? null}
       />
 
-      {/* 幻想オーバーレイ */}
-      <div className="gensou-overlay" />
-
-      {/* UI本体 */}
-      <div className="relative z-10 h-dvh w-full">
-        <ChatLayout />
-      </div>
+      {/* =========================
+          チャット本体
+         ========================= */}
+      {activeCharacter ? (
+        <ChatPane
+          character={activeCharacter}
+          messages={messages}
+          onSend={handleSend}
+          onAiMessage={handleAiMessage}
+          onOpenPanel={handleOpenPanel}
+        />
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-white/40">
+          マップからキャラクターを選択してください
+        </div>
+      )}
     </div>
   );
 }

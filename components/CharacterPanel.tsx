@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 /* =========================
@@ -10,6 +12,10 @@ type Character = {
   id: string;
   name: string;
   title: string;
+  world?: {
+    map: string;
+    location: string;
+  };
   color?: {
     accent?: string;
     text?: string;
@@ -20,6 +26,12 @@ type Props = {
   characters: Record<string, Character>;
   activeId: string;
   onSelect: (id: string) => void;
+
+  /** PC時：マップで選択中の locationId */
+  currentLocationId?: string | null;
+
+  /** どのマップから来たか（/map/[layer]） */
+  currentLayer?: string | null;
 };
 
 /* =========================
@@ -30,58 +42,204 @@ export default function CharacterPanel({
   characters,
   activeId,
   onSelect,
+  currentLocationId,
+  currentLayer,
 }: Props) {
+  const router = useRouter();
+
+  /* =========================
+     PC / Mobile 判定
+  ========================= */
+  const [isPC, setIsPC] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsPC(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const allCharacters = useMemo(() => Object.values(characters), [characters]);
+
+  /* =========================
+     PC：場所プリセット
+  ========================= */
+  const pcCharacters = useMemo(() => {
+    if (!currentLocationId) return [];
+    return allCharacters.filter((c) => c.world?.location === currentLocationId);
+  }, [allCharacters, currentLocationId]);
+
+  /* =========================
+     Mobile：場所 → キャラ grouped
+  ========================= */
+  const mobileGroups = useMemo(() => {
+    const map = new Map<string, Character[]>();
+    allCharacters.forEach((c) => {
+      if (!c.world) return;
+      const key = c.world.location;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    });
+    return Array.from(map.entries());
+  }, [allCharacters]);
+
+  /* ========================= */
+
   return (
     <aside className="gensou-sidebar relative z-10 flex h-dvh w-72 flex-col p-4">
       {/* タイトル */}
-      <div className="mb-6 px-2">
+      <div className="mb-4 px-2">
         <h1 className="font-gensou text-xl tracking-wide text-white/90">
           Touhou Talk
         </h1>
         <p className="mt-1 text-xs text-white/50">幻想郷対話記録</p>
       </div>
 
-      {/* キャラリスト */}
+      {/* =========================
+          PC：マップへ戻る
+         ========================= */}
+      {isPC && currentLocationId != null && (
+        <button
+          onClick={() => {
+            if (currentLayer) {
+              router.push(`/map/${currentLayer}`);
+            } else {
+              router.push("/map");
+            }
+          }}
+          className="
+            mx-2 mb-4
+            rounded-lg
+            border border-white/15
+            bg-black/40
+            px-3 py-2
+            text-left
+            text-sm
+            text-white/80
+            transition
+            hover:bg-black/60
+          "
+        >
+          ← マップに戻る
+        </button>
+      )}
+
+      {/* =========================
+          キャラリスト
+         ========================= */}
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
-        {Object.values(characters).map((ch) => {
-          const active = ch.id === activeId;
-          const accent = ch.color?.accent;
+        {/* ---------- PC ---------- */}
+        {isPC && (
+          <>
+            {currentLocationId == null && (
+              <div className="px-2 text-xs text-white/40">
+                マップから場所を選択してください
+              </div>
+            )}
 
-          return (
-            <button
-              key={ch.id}
-              onClick={() => onSelect(ch.id)}
-              className={cn(
-                "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
-                active
-                  ? "border-white/30 shadow-lg"
-                  : "border-white/10 hover:border-white/20"
-              )}
-            >
-              {/* 幻想アクセント（選択中のみ表示） */}
-              {active && accent && (
-                <div
-                  className={cn(
-                    "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
-                    accent
-                  )}
-                />
-              )}
+            {currentLocationId != null &&
+              pcCharacters.map((ch) => {
+                const active = ch.id === activeId;
+                const accent = ch.color?.accent;
 
-              <div className="relative z-10">
-                <div className="font-gensou text-base text-white">
-                  {ch.name}
-                </div>
-                <div className="mt-0.5 text-xs text-white/60">{ch.title}</div>
+                return (
+                  <button
+                    key={ch.id}
+                    onClick={() => onSelect(ch.id)}
+                    className={cn(
+                      "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                      active
+                        ? "border-white/30 shadow-lg"
+                        : "border-white/10 hover:border-white/20"
+                    )}
+                  >
+                    {active && accent && (
+                      <div
+                        className={cn(
+                          "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
+                          accent
+                        )}
+                      />
+                    )}
+
+                    <div className="relative z-10">
+                      <div className="font-gensou text-base text-white">
+                        {ch.name}
+                      </div>
+                      <div className="mt-0.5 text-xs text-white/60">
+                        {ch.title}
+                      </div>
+                    </div>
+
+                    {active && (
+                      <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
+                    )}
+                  </button>
+                );
+              })}
+
+            {currentLocationId != null && pcCharacters.length === 0 && (
+              <div className="px-2 text-xs text-white/40">
+                この場所にキャラクターはいません
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ---------- Mobile / Tablet ---------- */}
+        {!isPC &&
+          mobileGroups.map(([locationId, chars]) => (
+            <div key={locationId} className="mb-4">
+              <div className="mb-2 px-2 text-xs text-white/50">
+                {locationId}
               </div>
 
-              {/* 選択インジケータ */}
-              {active && (
-                <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
-              )}
-            </button>
-          );
-        })}
+              <div className="flex flex-col gap-3">
+                {chars.map((ch) => {
+                  const active = ch.id === activeId;
+                  const accent = ch.color?.accent;
+
+                  return (
+                    <button
+                      key={ch.id}
+                      onClick={() => onSelect(ch.id)}
+                      className={cn(
+                        "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                        active
+                          ? "border-white/30 shadow-lg"
+                          : "border-white/10 hover:border-white/20"
+                      )}
+                    >
+                      {active && accent && (
+                        <div
+                          className={cn(
+                            "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
+                            accent
+                          )}
+                        />
+                      )}
+
+                      <div className="relative z-10">
+                        <div className="font-gensou text-base text-white">
+                          {ch.name}
+                        </div>
+                        <div className="mt-0.5 text-xs text-white/60">
+                          {ch.title}
+                        </div>
+                      </div>
+
+                      {active && (
+                        <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
       </div>
 
       {/* フッター */}
