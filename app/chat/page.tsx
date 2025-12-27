@@ -3,7 +3,7 @@
 
 /**
  * /chat は URL クエリ依存・ユーザー操作前提のため
- * 静的プリレンダリングを禁止する
+ * 静的プリレンダリングを明示的に禁止
  */
 export const dynamic = "force-dynamic";
 
@@ -27,12 +27,12 @@ export default function ChatPage() {
   const searchParams = useSearchParams();
 
   /* =========================
-     URL params
+     URL params（client-only）
   ========================= */
 
-  const layer = searchParams.get("layer") ?? undefined;
-  const currentLocationId = searchParams.get("loc") ?? undefined;
-  const initialCharacterId = searchParams.get("char");
+  const currentLayer: string | null = searchParams.get("layer");
+  const currentLocationId: string | null = searchParams.get("loc");
+  const initialCharacterId: string | null = searchParams.get("char");
 
   /* =========================
      キャラ選択 state
@@ -93,7 +93,7 @@ export default function ChatPage() {
   }, []);
 
   const handleOpenPanel = useCallback(() => {
-    // モバイル用：将来拡張用フック
+    // モバイル用：将来拡張
   }, []);
 
   /* ========================= */
@@ -108,7 +108,7 @@ export default function ChatPage() {
         activeId={activeCharacterId ?? ""}
         onSelect={setActiveCharacterId}
         currentLocationId={currentLocationId}
-        currentLayer={layer ?? null}
+        currentLayer={currentLayer}
       />
 
       {/* =========================
