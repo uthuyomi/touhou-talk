@@ -33,16 +33,13 @@ export default function ChatLayout() {
 
   /**
    * キャラ別の会話履歴
-   * 👉 初期状態は「完全に空」
    */
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
     () => {
       const initial: Record<string, Message[]> = {};
-
       Object.values(characters).forEach((char) => {
         initial[char.id] = [];
       });
-
       return initial;
     }
   );
@@ -58,7 +55,6 @@ export default function ChatLayout() {
   const sendMessage = (content: string) => {
     setChatHistories((prev) => {
       const prevMessages = prev[character.id] ?? [];
-
       return {
         ...prev,
         [character.id]: [
@@ -79,7 +75,6 @@ export default function ChatLayout() {
   const appendAiMessage = (content: string) => {
     setChatHistories((prev) => {
       const prevMessages = prev[character.id] ?? [];
-
       return {
         ...prev,
         [character.id]: [
@@ -97,11 +92,14 @@ export default function ChatLayout() {
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
-          モバイル用：スライドパネル
+          キャラパネル（共通・単一）
          ========================= */}
-      <div
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 transition-transform lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-72 transition-transform",
+          // PC：常時表示
+          "lg:static lg:translate-x-0",
+          // Mobile：スライド
           isPanelOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -113,26 +111,17 @@ export default function ChatLayout() {
             setIsPanelOpen(false);
           }}
         />
-      </div>
+      </aside>
 
-      {/* モバイル用：背景オーバーレイ */}
+      {/* =========================
+          モバイル用：背景オーバーレイ
+         ========================= */}
       {isPanelOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setIsPanelOpen(false)}
         />
       )}
-
-      {/* =========================
-          PC / タブレット：常時表示
-         ========================= */}
-      <div className="hidden lg:block">
-        <CharacterPanel
-          characters={characters}
-          activeId={activeCharacterId}
-          onSelect={(id) => setActiveCharacterId(id as CharacterId)}
-        />
-      </div>
 
       {/* =========================
           チャットエリア
