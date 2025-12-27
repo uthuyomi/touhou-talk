@@ -1,6 +1,12 @@
 // app/chat/page.tsx
 "use client";
 
+/**
+ * /chat は URL クエリ依存・ユーザー操作前提のため
+ * 静的プリレンダリングを禁止する
+ */
+export const dynamic = "force-dynamic";
+
 import { useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import ChatPane from "@/components/ChatPane";
@@ -19,6 +25,10 @@ type Message = {
 
 export default function ChatPage() {
   const searchParams = useSearchParams();
+
+  /* =========================
+     URL params
+  ========================= */
 
   const layer = searchParams.get("layer") ?? undefined;
   const currentLocationId = searchParams.get("loc") ?? undefined;
@@ -83,7 +93,7 @@ export default function ChatPage() {
   }, []);
 
   const handleOpenPanel = useCallback(() => {
-    // モバイル用：必要なら後で実装
+    // モバイル用：将来拡張用フック
   }, []);
 
   /* ========================= */
