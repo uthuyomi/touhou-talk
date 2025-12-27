@@ -41,7 +41,7 @@ export default function ChatClient() {
 
   /* =========================
      モバイル用：パネル開閉
-     ★ 初期表示判定はここで完結させる
+     （初期表示はここで完結）
   ========================= */
 
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(() => {
@@ -54,16 +54,26 @@ export default function ChatClient() {
   });
 
   /* =========================
-     メッセージ state
+     キャラ別チャット履歴
   ========================= */
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "init",
-      role: "ai",
-      content: "……誰かが、こちらを見ている。",
-    },
-  ]);
+  const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
+    () => {
+      const initial: Record<string, Message[]> = {};
+
+      Object.keys(CHARACTERS).forEach((id) => {
+        initial[id] = [
+          {
+            id: "init",
+            role: "ai",
+            content: "……誰かが、こちらを見ている。",
+          },
+        ];
+      });
+
+      return initial;
+    }
+  );
 
   /* =========================
      activeCharacter 解決
@@ -75,22 +85,55 @@ export default function ChatClient() {
   }, [activeCharacterId]);
 
   /* =========================
+     表示用メッセージ
+  ========================= */
+
+  const messages = useMemo(() => {
+    if (!activeCharacterId) return [];
+    return chatHistories[activeCharacterId] ?? [];
+  }, [chatHistories, activeCharacterId]);
+
+  /* =========================
      メッセージ操作
   ========================= */
 
-  const handleSend = useCallback((content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content },
-    ]);
-  }, []);
+  const handleSend = useCallback(
+    (content: string) => {
+      if (!activeCharacterId) return;
 
-  const handleAiMessage = useCallback((content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "ai", content },
-    ]);
-  }, []);
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeCharacterId]: [
+          ...(prev[activeCharacterId] ?? []),
+          {
+            id: crypto.randomUUID(),
+            role: "user",
+            content,
+          },
+        ],
+      }));
+    },
+    [activeCharacterId]
+  );
+
+  const handleAiMessage = useCallback(
+    (content: string) => {
+      if (!activeCharacterId) return;
+
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeCharacterId]: [
+          ...(prev[activeCharacterId] ?? []),
+          {
+            id: crypto.randomUUID(),
+            role: "ai",
+            content,
+          },
+        ],
+      }));
+    },
+    [activeCharacterId]
+  );
 
   /* ========================= */
 
@@ -110,7 +153,7 @@ export default function ChatClient() {
           activeId={activeCharacterId ?? ""}
           onSelect={(id) => {
             setActiveCharacterId(id);
-            setIsPanelOpen(false); // 選択したら閉じる
+            setIsPanelOpen(false);
           }}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
@@ -147,7 +190,7 @@ export default function ChatClient() {
           messages={messages}
           onSend={handleSend}
           onAiMessage={handleAiMessage}
-          onOpenPanel={() => setIsPanelOpen(true)} // ☰ ボタン
+          onOpenPanel={() => setIsPanelOpen(true)}
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-white/40">
