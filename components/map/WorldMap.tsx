@@ -95,7 +95,7 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
           />
         )}
         {hasAnyCharacterInLayer("deep") && (
-          <LayerPill href="/map/deep" label="深層" active={layer === "deep"} />
+          <LayerPill href="/map/deep" label="旧都" active={layer === "deep"} />
         )}
         {hasAnyCharacterInLayer("higan") && (
           <LayerPill

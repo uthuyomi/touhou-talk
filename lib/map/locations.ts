@@ -109,6 +109,13 @@ export const LOCATIONS: readonly MapLocation[] = [
     hitRadius: 4.0,
   },
   {
+    id: "chireiden",
+    layer: "deep",
+    name: "地霊殿",
+    pos: { x: 28, y: 42 },
+    hitRadius: 4.5,
+  },
+  {
     id: "chireiden_entrance",
     layer: "deep",
     name: "地霊殿への穴",
