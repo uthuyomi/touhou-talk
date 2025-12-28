@@ -66,7 +66,22 @@
       "placeholder": "文に話しかける"
     }
   },
-
+  "momiji": {
+  "id": "momiji",
+  "name": "犬走 椛",
+  "title": "白狼天狗の見張り役",
+  "world": {
+    "map": "gensokyo",
+    "location": "youkai_mountain"
+  },
+  "color": {
+    "accent": "from-gray-400/40 to-red-500/20"
+  },
+  "ui": {
+    "chatBackground": "/background/momiji.png",
+    "placeholder": "椛に話しかける"
+  }
+},
   "youmu": {
     "id": "youmu",
     "name": "魂魄 妖夢",
