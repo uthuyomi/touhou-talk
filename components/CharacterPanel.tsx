@@ -32,6 +32,9 @@ type Props = {
 
   /** どのマップから来たか（/map/[layer]） */
   currentLayer?: string | null;
+
+  /** 初回モバイル用：全面表示 */
+  fullScreen?: boolean;
 };
 
 /* =========================
@@ -44,6 +47,7 @@ export default function CharacterPanel({
   onSelect,
   currentLocationId,
   currentLayer,
+  fullScreen = false,
 }: Props) {
   const router = useRouter();
 
@@ -89,7 +93,12 @@ export default function CharacterPanel({
   /* ========================= */
 
   return (
-    <aside className="gensou-sidebar relative z-10 flex h-dvh w-72 flex-col p-4">
+    <aside
+      className={cn(
+        "gensou-sidebar relative z-10 flex h-dvh flex-col p-4",
+        fullScreen ? "w-full" : "w-72"
+      )}
+    >
       {/* タイトル */}
       <div className="mb-4 px-2">
         <h1 className="font-gensou text-xl tracking-wide text-white/90">
