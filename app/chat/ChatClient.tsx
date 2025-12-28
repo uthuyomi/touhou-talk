@@ -7,6 +7,9 @@ import CharacterPanel from "@/components/CharacterPanel";
 import { CHARACTERS } from "@/data/characters";
 import { cn } from "@/lib/utils";
 
+/* ★ 正規：グループ定義 */
+import { getGroupsByLocation, canEnableGroup, GroupDef } from "@/data/group";
+
 /* =========================
    Types
 ========================= */
@@ -15,6 +18,13 @@ type Message = {
   id: string;
   role: "user" | "ai";
   content: string;
+};
+
+/** CharacterPanel に渡す最小 groupContext */
+type GroupContext = {
+  enabled: boolean;
+  label: string;
+  group: GroupDef;
 };
 
 /* =========================
@@ -39,17 +49,9 @@ export default function ChatClient() {
         : null
   );
 
-  /* =========================
-     ★ 初回選択済みフラグ（ここが肝）
-  ========================= */
-
   const [hasSelectedOnce, setHasSelectedOnce] = useState<boolean>(
     Boolean(initialCharacterId)
   );
-
-  /* =========================
-     モバイル用：パネル開閉
-  ========================= */
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -74,17 +76,13 @@ export default function ChatClient() {
   );
 
   /* =========================
-     activeCharacter 解決
+     activeCharacter
   ========================= */
 
   const activeCharacter = useMemo(() => {
     if (!activeCharacterId) return null;
     return CHARACTERS[activeCharacterId] ?? null;
   }, [activeCharacterId]);
-
-  /* =========================
-     表示用メッセージ
-  ========================= */
 
   const messages = useMemo(() => {
     if (!activeCharacterId) return [];
@@ -124,7 +122,7 @@ export default function ChatClient() {
   );
 
   /* =========================
-     Mobile 判定（SSR安全）
+     Mobile 判定
   ========================= */
 
   const [isMobile] = useState<boolean>(() => {
@@ -134,12 +132,32 @@ export default function ChatClient() {
 
   const isCharacterSelected = Boolean(activeCharacterId);
 
+  /* =========================
+     ★ グループチャット文脈（正規）
+  ========================= */
+
+  const groupContext = useMemo<GroupContext | null>(() => {
+    if (!currentLayer || !currentLocationId) return null;
+
+    const groups = getGroupsByLocation(currentLayer, currentLocationId);
+    if (groups.length === 0) return null;
+
+    const group = groups[0]; // 1ロケーション1グループ前提
+    if (!canEnableGroup(group.id)) return null;
+
+    return {
+      enabled: true,
+      label: group.ui.label,
+      group,
+    };
+  }, [currentLayer, currentLocationId]);
+
   /* ========================= */
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
-          モバイル初回：完全フルスクリーン（1回だけ）
+          モバイル初回
          ========================= */}
       {isMobile && !hasSelectedOnce && !isCharacterSelected && (
         <div className="fixed inset-0 z-50">
@@ -149,18 +167,22 @@ export default function ChatClient() {
               activeId=""
               onSelect={(id) => {
                 setActiveCharacterId(id);
-                setHasSelectedOnce(true); // ★ ここで確定
+                setHasSelectedOnce(true);
                 setIsPanelOpen(false);
               }}
               currentLocationId={currentLocationId}
               currentLayer={currentLayer}
+              groupContext={groupContext}
+              onStartGroup={() => {
+                console.log("start group chat", groupContext);
+              }}
             />
           </div>
         </div>
       )}
 
       {/* =========================
-          モバイル：再オープン時（スライド）
+          モバイル再オープン
          ========================= */}
       {isMobile && hasSelectedOnce && (
         <>
@@ -179,6 +201,10 @@ export default function ChatClient() {
               }}
               currentLocationId={currentLocationId}
               currentLayer={currentLayer}
+              groupContext={groupContext}
+              onStartGroup={() => {
+                console.log("start group chat", groupContext);
+              }}
             />
           </div>
 
@@ -201,11 +227,15 @@ export default function ChatClient() {
           onSelect={setActiveCharacterId}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
+          groupContext={groupContext}
+          onStartGroup={() => {
+            console.log("start group chat", groupContext);
+          }}
         />
       </div>
 
       {/* =========================
-          チャット本体
+          単体チャット
          ========================= */}
       {activeCharacter && (
         <ChatPane

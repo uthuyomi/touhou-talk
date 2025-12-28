@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import type { GroupDef } from "@/data/group";
 
 /* =========================
    Types
@@ -22,19 +23,25 @@ type Character = {
   };
 };
 
+/** ★ ChatClient と正規に一致する GroupContext */
+type GroupContext = {
+  enabled: boolean;
+  label: string;
+  group: GroupDef;
+};
+
 type Props = {
   characters: Record<string, Character>;
   activeId: string;
   onSelect: (id: string) => void;
 
-  /** PC時：マップで選択中の locationId */
   currentLocationId?: string | null;
-
-  /** どのマップから来たか（/map/[layer]） */
   currentLayer?: string | null;
-
-  /** 初回モバイル用：全面表示 */
   fullScreen?: boolean;
+
+  /* ★ グループチャット関連 */
+  groupContext?: GroupContext | null;
+  onStartGroup?: () => void;
 };
 
 /* =========================
@@ -48,6 +55,8 @@ export default function CharacterPanel({
   currentLocationId,
   currentLayer,
   fullScreen = false,
+  groupContext,
+  onStartGroup,
 }: Props) {
   const router = useRouter();
 
@@ -69,7 +78,7 @@ export default function CharacterPanel({
   const allCharacters = useMemo(() => Object.values(characters), [characters]);
 
   /* =========================
-     PC：場所プリセット
+     PC：場所フィルタ
   ========================= */
   const pcCharacters = useMemo(() => {
     if (!currentLocationId) return [];
@@ -77,7 +86,7 @@ export default function CharacterPanel({
   }, [allCharacters, currentLocationId]);
 
   /* =========================
-     Mobile：場所 → キャラ grouped
+     Mobile：場所別グループ
   ========================= */
   const mobileGroups = useMemo(() => {
     const map = new Map<string, Character[]>();
@@ -137,7 +146,7 @@ export default function CharacterPanel({
       )}
 
       {/* =========================
-          キャラリスト
+          リスト本体
          ========================= */}
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
         {/* ---------- PC ---------- */}
@@ -148,6 +157,28 @@ export default function CharacterPanel({
                 マップから場所を選択してください
               </div>
             )}
+
+            {/* ★ グループチャットカード（PC） */}
+            {currentLocationId != null &&
+              groupContext?.enabled &&
+              onStartGroup && (
+                <button
+                  onClick={onStartGroup}
+                  className={cn(
+                    "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                    "border-white/20 hover:border-white/40 bg-black/30"
+                  )}
+                >
+                  <div className="relative z-10">
+                    <div className="font-gensou text-base text-white">
+                      {groupContext.group.name}
+                    </div>
+                    <div className="mt-0.5 text-xs text-white/60">
+                      {groupContext.group.title}
+                    </div>
+                  </div>
+                </button>
+              )}
 
             {currentLocationId != null &&
               pcCharacters.map((ch) => {
@@ -189,12 +220,6 @@ export default function CharacterPanel({
                   </button>
                 );
               })}
-
-            {currentLocationId != null && pcCharacters.length === 0 && (
-              <div className="px-2 text-xs text-white/40">
-                この場所にキャラクターはいません
-              </div>
-            )}
           </>
         )}
 
@@ -207,6 +232,28 @@ export default function CharacterPanel({
               </div>
 
               <div className="flex flex-col gap-3">
+                {/* ★ グループチャットカード（Mobile） */}
+                {groupContext?.enabled &&
+                  groupContext.group.world.location === locationId &&
+                  onStartGroup && (
+                    <button
+                      onClick={onStartGroup}
+                      className={cn(
+                        "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                        "border-white/20 hover:border-white/40 bg-black/30"
+                      )}
+                    >
+                      <div className="relative z-10">
+                        <div className="font-gensou text-base text-white">
+                          {groupContext.group.name}
+                        </div>
+                        <div className="mt-0.5 text-xs text-white/60">
+                          {groupContext.group.title}
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
                 {chars.map((ch) => {
                   const active = ch.id === activeId;
                   const accent = ch.color?.accent;

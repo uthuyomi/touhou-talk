@@ -80,7 +80,7 @@ export default function ChatPane({
     setInput("");
     setIsLoading(true);
 
-    // UI即反映（文字列）
+    // UI即反映
     onSend(content);
 
     try {
@@ -100,7 +100,6 @@ export default function ChatPane({
         content: string;
       };
 
-      // AI応答も文字列で返す
       onAiMessage(aiReply.content);
     } catch (error) {
       console.error("[ChatPane] API Error:", error);
@@ -123,7 +122,9 @@ export default function ChatPane({
         />
       )}
 
-      {/* ヘッダー */}
+      {/* =========================
+          ヘッダー
+         ========================= */}
       <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
         {character.color?.accent && (
           <div
@@ -134,6 +135,7 @@ export default function ChatPane({
           />
         )}
 
+        {/* モバイル：キャラパネルボタン */}
         <button
           onClick={onOpenPanel}
           className="lg:hidden absolute right-4 top-4 z-50 rounded-lg px-2 py-1 text-white/80 hover:bg-white/10"
@@ -147,7 +149,9 @@ export default function ChatPane({
         </div>
       </header>
 
-      {/* チャット */}
+      {/* =========================
+          チャット
+         ========================= */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
         {messages
           .filter((m) => m.id !== "init")
@@ -177,7 +181,9 @@ export default function ChatPane({
           })}
       </div>
 
-      {/* 入力欄 */}
+      {/* =========================
+          入力欄
+         ========================= */}
       <footer className="border-t border-white/10 backdrop-blur-md">
         <div className="mx-auto max-w-3xl px-4 py-4">
           <div className="flex items-end gap-3 rounded-2xl bg-black/40 p-3 shadow-lg">

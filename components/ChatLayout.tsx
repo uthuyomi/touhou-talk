@@ -1,16 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import characters from "@/data/characters.json";
 import CharacterPanel from "@/components/CharacterPanel";
 import ChatPane from "@/components/ChatPane";
 import { cn } from "@/lib/utils";
+import { buildGroupContext } from "@/lib/chat/groupContext";
 
 type CharacterId = keyof typeof characters;
 
-/**
- * Message 型
- */
 type Message = {
   id: string;
   role: "user" | "ai";
@@ -18,87 +16,72 @@ type Message = {
 };
 
 export default function ChatLayout() {
-  /**
-   * 現在選択中のキャラ
-   */
+  /* =========================
+     固定ロケーション（簡易対応）
+  ========================= */
+  const currentLayer = "gensokyo";
+  const currentLocationId = "hakurei_shrine";
+
+  /* =========================
+     グループコンテキスト
+  ========================= */
+  const groupContext = useMemo(
+    () =>
+      buildGroupContext({
+        layer: currentLayer,
+        locationId: currentLocationId,
+      }),
+    [currentLayer, currentLocationId]
+  );
+
+  const handleStartGroup = () => {
+    console.log("Group chat start", groupContext);
+  };
+
+  /* ========================= */
+
   const [activeCharacterId, setActiveCharacterId] =
     useState<CharacterId>("reimu");
 
-  /**
-   * モバイル用：キャラパネル開閉
-   */
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const character = characters[activeCharacterId];
 
-  /**
-   * キャラ別の会話履歴
-   * 👉 初期状態は「完全に空」
-   */
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
     () => {
       const initial: Record<string, Message[]> = {};
-
       Object.values(characters).forEach((char) => {
         initial[char.id] = [];
       });
-
       return initial;
     }
   );
 
-  /**
-   * 現在キャラのメッセージ
-   */
   const messages = chatHistories[character.id] ?? [];
 
-  /**
-   * ユーザー送信
-   */
   const sendMessage = (content: string) => {
-    setChatHistories((prev) => {
-      const prevMessages = prev[character.id] ?? [];
-
-      return {
-        ...prev,
-        [character.id]: [
-          ...prevMessages,
-          {
-            id: crypto.randomUUID(),
-            role: "user",
-            content,
-          },
-        ],
-      };
-    });
+    setChatHistories((prev) => ({
+      ...prev,
+      [character.id]: [
+        ...(prev[character.id] ?? []),
+        { id: crypto.randomUUID(), role: "user", content },
+      ],
+    }));
   };
 
-  /**
-   * AI 返信追加
-   */
   const appendAiMessage = (content: string) => {
-    setChatHistories((prev) => {
-      const prevMessages = prev[character.id] ?? [];
-
-      return {
-        ...prev,
-        [character.id]: [
-          ...prevMessages,
-          {
-            id: crypto.randomUUID(),
-            role: "ai",
-            content,
-          },
-        ],
-      };
-    });
+    setChatHistories((prev) => ({
+      ...prev,
+      [character.id]: [
+        ...(prev[character.id] ?? []),
+        { id: crypto.randomUUID(), role: "ai", content },
+      ],
+    }));
   };
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
-      {/* =========================
-          モバイル用：スライドパネル
-         ========================= */}
+      {/* モバイル */}
       <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 transition-transform lg:hidden",
@@ -112,10 +95,13 @@ export default function ChatLayout() {
             setActiveCharacterId(id as CharacterId);
             setIsPanelOpen(false);
           }}
+          currentLayer={currentLayer}
+          currentLocationId={currentLocationId}
+          groupContext={groupContext}
+          onStartGroup={handleStartGroup}
         />
       </div>
 
-      {/* モバイル用：背景オーバーレイ */}
       {isPanelOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
@@ -123,20 +109,19 @@ export default function ChatLayout() {
         />
       )}
 
-      {/* =========================
-          PC / タブレット：常時表示
-         ========================= */}
+      {/* PC */}
       <div className="hidden lg:block">
         <CharacterPanel
           characters={characters}
           activeId={activeCharacterId}
           onSelect={(id) => setActiveCharacterId(id as CharacterId)}
+          currentLayer={currentLayer}
+          currentLocationId={currentLocationId}
+          groupContext={groupContext}
+          onStartGroup={handleStartGroup}
         />
       </div>
 
-      {/* =========================
-          チャットエリア
-         ========================= */}
       <ChatPane
         character={character}
         messages={messages}
