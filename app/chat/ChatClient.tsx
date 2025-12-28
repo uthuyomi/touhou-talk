@@ -40,6 +40,14 @@ export default function ChatClient() {
   );
 
   /* =========================
+     ★ 初回選択済みフラグ（ここが肝）
+  ========================= */
+
+  const [hasSelectedOnce, setHasSelectedOnce] = useState<boolean>(
+    Boolean(initialCharacterId)
+  );
+
+  /* =========================
      モバイル用：パネル開閉
   ========================= */
 
@@ -131,17 +139,17 @@ export default function ChatClient() {
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
-          モバイル初回：完全フルスクリーン
+          モバイル初回：完全フルスクリーン（1回だけ）
          ========================= */}
-      {isMobile && !isCharacterSelected && (
+      {isMobile && !hasSelectedOnce && !isCharacterSelected && (
         <div className="fixed inset-0 z-50">
-          {/* CharacterPanel の w-72 を強制上書き */}
           <div className="[&_.gensou-sidebar]:w-full [&_.gensou-sidebar]:max-w-none h-full w-full">
             <CharacterPanel
               characters={CHARACTERS}
               activeId=""
               onSelect={(id) => {
                 setActiveCharacterId(id);
+                setHasSelectedOnce(true); // ★ ここで確定
                 setIsPanelOpen(false);
               }}
               currentLocationId={currentLocationId}
@@ -152,28 +160,26 @@ export default function ChatClient() {
       )}
 
       {/* =========================
-          モバイル：再オープン時
+          モバイル：再オープン時（スライド）
          ========================= */}
-      {isMobile && isCharacterSelected && (
+      {isMobile && hasSelectedOnce && (
         <>
           <div
             className={cn(
-              "fixed inset-0 z-50 transition-transform duration-300",
+              "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300",
               isPanelOpen ? "translate-x-0" : "-translate-x-full"
             )}
           >
-            <div className="[&_.gensou-sidebar]:w-full [&_.gensou-sidebar]:max-w-none h-full w-full">
-              <CharacterPanel
-                characters={CHARACTERS}
-                activeId={activeCharacterId ?? ""}
-                onSelect={(id) => {
-                  setActiveCharacterId(id);
-                  setIsPanelOpen(false);
-                }}
-                currentLocationId={currentLocationId}
-                currentLayer={currentLayer}
-              />
-            </div>
+            <CharacterPanel
+              characters={CHARACTERS}
+              activeId={activeCharacterId ?? ""}
+              onSelect={(id) => {
+                setActiveCharacterId(id);
+                setIsPanelOpen(false);
+              }}
+              currentLocationId={currentLocationId}
+              currentLayer={currentLayer}
+            />
           </div>
 
           {isPanelOpen && (
