@@ -43,7 +43,7 @@ export default function ChatClient() {
      モバイル用：パネル開閉
   ========================= */
 
-  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   /* =========================
      キャラ別チャット履歴
@@ -52,7 +52,6 @@ export default function ChatClient() {
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
     () => {
       const initial: Record<string, Message[]> = {};
-
       Object.keys(CHARACTERS).forEach((id) => {
         initial[id] = [
           {
@@ -62,7 +61,6 @@ export default function ChatClient() {
           },
         ];
       });
-
       return initial;
     }
   );
@@ -92,16 +90,11 @@ export default function ChatClient() {
   const handleSend = useCallback(
     (content: string) => {
       if (!activeCharacterId) return;
-
       setChatHistories((prev) => ({
         ...prev,
         [activeCharacterId]: [
-          ...(prev[activeCharacterId] ?? []),
-          {
-            id: crypto.randomUUID(),
-            role: "user",
-            content,
-          },
+          ...prev[activeCharacterId],
+          { id: crypto.randomUUID(), role: "user", content },
         ],
       }));
     },
@@ -111,16 +104,11 @@ export default function ChatClient() {
   const handleAiMessage = useCallback(
     (content: string) => {
       if (!activeCharacterId) return;
-
       setChatHistories((prev) => ({
         ...prev,
         [activeCharacterId]: [
-          ...(prev[activeCharacterId] ?? []),
-          {
-            id: crypto.randomUUID(),
-            role: "ai",
-            content,
-          },
+          ...prev[activeCharacterId],
+          { id: crypto.randomUUID(), role: "ai", content },
         ],
       }));
     },
@@ -128,13 +116,11 @@ export default function ChatClient() {
   );
 
   /* =========================
-     判定
-     - hydration差を避けるため、ここは "初回はPC扱い" に倒してOK
-       （モバイル判定はクライアント実行後に正しくなる）
+     Mobile 判定（SSR安全）
   ========================= */
 
   const [isMobile] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false; // SSR/ビルド時は false
+    if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 1023px)").matches;
   });
 
@@ -145,26 +131,28 @@ export default function ChatClient() {
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
-          モバイル初回：全面キャラ選択
-          - ここでは「閉じる」概念を持たせない（詰み防止）
+          モバイル初回：完全フルスクリーン
          ========================= */}
       {isMobile && !isCharacterSelected && (
         <div className="fixed inset-0 z-50">
-          <CharacterPanel
-            characters={CHARACTERS}
-            activeId=""
-            onSelect={(id) => {
-              setActiveCharacterId(id);
-              setIsPanelOpen(false);
-            }}
-            currentLocationId={currentLocationId}
-            currentLayer={currentLayer}
-          />
+          {/* CharacterPanel の w-72 を強制上書き */}
+          <div className="[&_.gensou-sidebar]:w-full [&_.gensou-sidebar]:max-w-none h-full w-full">
+            <CharacterPanel
+              characters={CHARACTERS}
+              activeId=""
+              onSelect={(id) => {
+                setActiveCharacterId(id);
+                setIsPanelOpen(false);
+              }}
+              currentLocationId={currentLocationId}
+              currentLayer={currentLayer}
+            />
+          </div>
         </div>
       )}
 
       {/* =========================
-          モバイル：スライドキャラパネル
+          モバイル：再オープン時
          ========================= */}
       {isMobile && isCharacterSelected && (
         <>
@@ -174,8 +162,7 @@ export default function ChatClient() {
               isPanelOpen ? "translate-x-0" : "-translate-x-full"
             )}
           >
-            {/* ★ 画面いっぱいにする（縦横全面） */}
-            <div className="h-dvh w-full">
+            <div className="[&_.gensou-sidebar]:w-full [&_.gensou-sidebar]:max-w-none h-full w-full">
               <CharacterPanel
                 characters={CHARACTERS}
                 activeId={activeCharacterId ?? ""}
@@ -189,8 +176,6 @@ export default function ChatClient() {
             </div>
           </div>
 
-          {/* ★ オーバーレイは「閉じる」用途だけど、誤タップ対策として
-              “初回選択済み” のときだけ有効（ここは選択済みなのでOK） */}
           {isPanelOpen && (
             <div
               className="fixed inset-0 z-40 bg-black/40"
@@ -201,7 +186,7 @@ export default function ChatClient() {
       )}
 
       {/* =========================
-          PC：常時表示キャラパネル
+          PC
          ========================= */}
       <div className="hidden lg:block">
         <CharacterPanel
