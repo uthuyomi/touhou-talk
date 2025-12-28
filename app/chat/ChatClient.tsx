@@ -41,17 +41,9 @@ export default function ChatClient() {
 
   /* =========================
      モバイル用：パネル開閉
-     （初期表示はここで完結）
   ========================= */
 
-  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-
-    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
-
-    // スマホ & キャラ未選択なら最初から開く
-    return isMobile && !(initialCharacterId && CHARACTERS[initialCharacterId]);
-  });
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
 
   /* =========================
      キャラ別チャット履歴
@@ -135,37 +127,68 @@ export default function ChatClient() {
     [activeCharacterId]
   );
 
+  /* =========================
+     判定
+  ========================= */
+
+  const isMobile =
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 1023px)").matches;
+
+  const isCharacterSelected = Boolean(activeCharacterId);
+
   /* ========================= */
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
+          モバイル初回：全面キャラ選択
+         ========================= */}
+      {isMobile && !isCharacterSelected && (
+        <div className="fixed inset-0 z-50">
+          <CharacterPanel
+            characters={CHARACTERS}
+            activeId=""
+            onSelect={(id) => {
+              setActiveCharacterId(id);
+              setIsPanelOpen(false);
+            }}
+            currentLocationId={currentLocationId}
+            currentLayer={currentLayer}
+          />
+        </div>
+      )}
+
+      {/* =========================
           モバイル：スライドキャラパネル
          ========================= */}
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300 lg:hidden",
-          isPanelOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <CharacterPanel
-          characters={CHARACTERS}
-          activeId={activeCharacterId ?? ""}
-          onSelect={(id) => {
-            setActiveCharacterId(id);
-            setIsPanelOpen(false);
-          }}
-          currentLocationId={currentLocationId}
-          currentLayer={currentLayer}
-        />
-      </div>
+      {isMobile && isCharacterSelected && (
+        <>
+          <div
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300",
+              isPanelOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+          >
+            <CharacterPanel
+              characters={CHARACTERS}
+              activeId={activeCharacterId}
+              onSelect={(id) => {
+                setActiveCharacterId(id);
+                setIsPanelOpen(false);
+              }}
+              currentLocationId={currentLocationId}
+              currentLayer={currentLayer}
+            />
+          </div>
 
-      {/* モバイル：背景オーバーレイ */}
-      {isPanelOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setIsPanelOpen(false)}
-        />
+          {isPanelOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40"
+              onClick={() => setIsPanelOpen(false)}
+            />
+          )}
+        </>
       )}
 
       {/* =========================
@@ -184,7 +207,7 @@ export default function ChatClient() {
       {/* =========================
           チャット本体
          ========================= */}
-      {activeCharacter ? (
+      {activeCharacter && (
         <ChatPane
           character={activeCharacter}
           messages={messages}
@@ -192,10 +215,6 @@ export default function ChatClient() {
           onAiMessage={handleAiMessage}
           onOpenPanel={() => setIsPanelOpen(true)}
         />
-      ) : (
-        <div className="flex flex-1 items-center justify-center text-white/40">
-          マップからキャラクターを選択してください
-        </div>
       )}
     </div>
   );
