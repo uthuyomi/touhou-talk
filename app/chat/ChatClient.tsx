@@ -129,11 +129,14 @@ export default function ChatClient() {
 
   /* =========================
      判定
+     - hydration差を避けるため、ここは "初回はPC扱い" に倒してOK
+       （モバイル判定はクライアント実行後に正しくなる）
   ========================= */
 
-  const isMobile =
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 1023px)").matches;
+  const [isMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false; // SSR/ビルド時は false
+    return window.matchMedia("(max-width: 1023px)").matches;
+  });
 
   const isCharacterSelected = Boolean(activeCharacterId);
 
@@ -143,6 +146,7 @@ export default function ChatClient() {
     <div className="relative flex h-dvh w-full overflow-hidden">
       {/* =========================
           モバイル初回：全面キャラ選択
+          - ここでは「閉じる」概念を持たせない（詰み防止）
          ========================= */}
       {isMobile && !isCharacterSelected && (
         <div className="fixed inset-0 z-50">
@@ -166,22 +170,27 @@ export default function ChatClient() {
         <>
           <div
             className={cn(
-              "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300",
+              "fixed inset-0 z-50 transition-transform duration-300",
               isPanelOpen ? "translate-x-0" : "-translate-x-full"
             )}
           >
-            <CharacterPanel
-              characters={CHARACTERS}
-              activeId={activeCharacterId ?? ""} // ← ★ここが修正点
-              onSelect={(id) => {
-                setActiveCharacterId(id);
-                setIsPanelOpen(false);
-              }}
-              currentLocationId={currentLocationId}
-              currentLayer={currentLayer}
-            />
+            {/* ★ 画面いっぱいにする（縦横全面） */}
+            <div className="h-dvh w-full">
+              <CharacterPanel
+                characters={CHARACTERS}
+                activeId={activeCharacterId ?? ""}
+                onSelect={(id) => {
+                  setActiveCharacterId(id);
+                  setIsPanelOpen(false);
+                }}
+                currentLocationId={currentLocationId}
+                currentLayer={currentLayer}
+              />
+            </div>
           </div>
 
+          {/* ★ オーバーレイは「閉じる」用途だけど、誤タップ対策として
+              “初回選択済み” のときだけ有効（ここは選択済みなのでOK） */}
           {isPanelOpen && (
             <div
               className="fixed inset-0 z-40 bg-black/40"
@@ -197,7 +206,7 @@ export default function ChatClient() {
       <div className="hidden lg:block">
         <CharacterPanel
           characters={CHARACTERS}
-          activeId={activeCharacterId ?? ""} // ← 念のため統一
+          activeId={activeCharacterId ?? ""}
           onSelect={setActiveCharacterId}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
