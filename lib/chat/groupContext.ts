@@ -1,19 +1,15 @@
 // lib/chat/groupContext.ts
 //
 // ✅ Group Chat の「核」になる中立ロジック。
-// - UI も API も触らず、ここで「場」と「参加者」と「履歴」を統合する
-// - ここは “LLM を呼ばない” 純データ組み立て層
-//
-// 目的：
-// - location（場所）を入力したら、その場所に存在するキャラを CHARACTERS から抽出
-// - data が存在しないキャラは自動的に除外
-// - グループチャット用の「共通コンテキスト」を生成する
+// - UI / API / LLM から独立した純データ層
+// - 「場（GroupDef）」を唯一の正規入力とする
 //
 
-import { CHARACTERS } from "@/data/characters";
+import type { GroupDef } from "@/data/group";
+import { getGroupById, getGroupsByLocation } from "@/data/group";
 
 /* =========================
-   Types (App-level)
+   Types
 ========================= */
 
 /**
@@ -25,101 +21,61 @@ export type ChatMessage = {
   role: "user" | "ai";
   content: string;
 
-  /**
-   * グループチャット用
-   * - ai 発言時、誰が喋ったかを示す
-   */
+  /** グループチャット時：誰の発言か */
   speakerId?: string;
 };
 
 /**
- * キャラ定義（CHARACTERS の shape を踏襲）
- */
-export type CharacterDef = {
-  id: string;
-  name: string;
-  title: string;
-  world?: {
-    map: string;
-    location: string;
-  };
-  color: {
-    accent: string;
-  };
-  ui: {
-    chatBackground: string;
-    placeholder: string;
-  };
-};
-
-/**
- * グループチャットの「場」定義
+ * グループチャットの「場」コンテキスト
+ *
+ * 👉 UI / Chat / API すべてがこれを参照する
  */
 export type GroupContext = {
-  /** 現在のマップ層 */
-  layer: string | null;
+  /** 有効かどうか */
+  enabled: boolean;
 
-  /** 現在のロケーションID */
-  locationId: string;
-
-  /** 参加キャラ（データが存在するものだけ） */
-  participants: CharacterDef[];
-
-  /** 表示用ラベル（今は locationId） */
+  /** 表示用ラベル */
   label: string;
+
+  /** 正規のグループ定義（SSOT） */
+  group: GroupDef;
 
   /** グループチャットの履歴 */
   history: ChatMessage[];
 
   /** 現在の話者（未開始時は null） */
   currentSpeakerId: string | null;
-
-  /**
-   * この場でグループチャットが成立するか
-   * - participants が 1人以上
-   */
-  enabled: boolean;
 };
 
 /* =========================
-   Helpers
+   Builders
 ========================= */
 
 /**
- * 指定ロケーションに存在するキャラを抽出
- */
-export function getParticipantsByLocation(locationId: string): CharacterDef[] {
-  const all = Object.values(CHARACTERS) as CharacterDef[];
-
-  return all.filter((c) => {
-    const loc = c.world?.location;
-    return typeof loc === "string" && loc === locationId;
-  });
-}
-
-/**
- * GroupContext を生成（未開始状態）
+ * location から GroupContext を構築（未開始状態）
  *
- * - ここでは「誰が喋るか」はまだ決めない
+ * - 対応する GroupDef が存在しない場合は null
+ * - participants 数は GroupDef 側で保証される
  */
 export function buildGroupContext(args: {
-  layer: string | null;
+  layer: string;
   locationId: string;
   history?: ChatMessage[];
-}): GroupContext {
+}): GroupContext | null {
   const { layer, locationId } = args;
 
-  const participants = getParticipantsByLocation(locationId);
-  const history = args.history ?? [];
+  const groups = getGroupsByLocation(layer, locationId);
+  if (groups.length === 0) return null;
+
+  // 現時点では「1ロケーション = 1グループ」前提
+  const group = groups[0];
 
   return {
-    layer,
-    locationId,
-    participants,
-    label: locationId,
-    history,
+    enabled: group.participants.length >= 1,
+    label: group.world.location,
+    group,
+    history: args.history ?? [],
     currentSpeakerId: null,
-    enabled: participants.length >= 1,
   };
 }
 
@@ -129,69 +85,48 @@ export function buildGroupContext(args: {
 
 /**
  * ランダムに話者を 1 人選ぶ
- * - participants が空なら null
  */
-export function pickRandomSpeaker(
-  participants: CharacterDef[]
-): CharacterDef | null {
-  if (participants.length === 0) return null;
+export function pickRandomSpeakerId(group: GroupDef): string | null {
+  if (group.participants.length === 0) return null;
 
-  const index = Math.floor(Math.random() * participants.length);
-  return participants[index];
+  const index = Math.floor(Math.random() * group.participants.length);
+  return group.participants[index];
 }
 
 /**
- * グループチャット開始用の初期化
+ * グループチャット開始処理
  *
- * - 最初の話者をランダムに決定
+ * - 最初の話者を決定
  * - 初期メッセージを生成
- * - currentSpeakerId を確定させる
- *
- * 👉 UI / API からはこれを呼ぶだけでよい
  */
 export function initializeGroupContext(ctx: GroupContext): GroupContext {
   if (!ctx.enabled) return ctx;
-
-  // 既に開始済みなら何もしない
   if (ctx.currentSpeakerId) return ctx;
 
-  const firstSpeaker = pickRandomSpeaker(ctx.participants);
-
-  if (!firstSpeaker) return ctx;
+  const speakerId = pickRandomSpeakerId(ctx.group);
+  if (!speakerId) return ctx;
 
   const initMessage: ChatMessage = {
     id: "init",
     role: "ai",
-    speakerId: firstSpeaker.id,
-    content: `……${firstSpeaker.name} が、静かに口を開いた。`,
+    speakerId,
+    content: `……場の空気が、静かに動き出した。`,
   };
 
   return {
     ...ctx,
-    currentSpeakerId: firstSpeaker.id,
+    currentSpeakerId: speakerId,
     history: ctx.history.length === 0 ? [initMessage] : ctx.history,
   };
 }
 
 /* =========================
-   Optional utilities
+   Utilities
 ========================= */
 
 /**
- * 参加者IDリストを返す
+ * 参加者 ID 一覧
  */
 export function getParticipantIds(ctx: GroupContext): string[] {
-  return ctx.participants.map((p) => p.id);
-}
-
-/**
- * 汎用：場の雰囲気メッセージ
- * （将来イベント用）
- */
-export function createGroupInitMessage(locationId: string): ChatMessage {
-  return {
-    id: "init",
-    role: "ai",
-    content: `……${locationId} の空気が、少しだけざわついている。`,
-  };
+  return ctx.group.participants;
 }
