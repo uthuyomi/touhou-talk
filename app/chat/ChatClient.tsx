@@ -172,7 +172,7 @@ export default function ChatClient() {
           >
             <CharacterPanel
               characters={CHARACTERS}
-              activeId={activeCharacterId}
+              activeId={activeCharacterId ?? ""} // ← ★ここが修正点
               onSelect={(id) => {
                 setActiveCharacterId(id);
                 setIsPanelOpen(false);
@@ -197,7 +197,7 @@ export default function ChatClient() {
       <div className="hidden lg:block">
         <CharacterPanel
           characters={CHARACTERS}
-          activeId={activeCharacterId ?? ""}
+          activeId={activeCharacterId ?? ""} // ← 念のため統一
           onSelect={setActiveCharacterId}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
