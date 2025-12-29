@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatPane from "@/components/ChatPane";
 import CharacterPanel from "@/components/CharacterPanel";
 import { CHARACTERS } from "@/data/characters";
@@ -76,6 +76,23 @@ export default function ChatClient() {
     if (mode === "group") return "__group__";
     return activeCharacterId ?? "";
   }, [mode, activeCharacterId]);
+
+  /* =========================
+     ★ Mobile / Tablet 判定（< lg）
+  ========================= */
+
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 1023px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   /* =========================
      履歴
@@ -199,6 +216,46 @@ export default function ChatClient() {
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
+      {/* ===== Mobile / Tablet 初回：キャラ未選択なら全画面パネル ===== */}
+      {isMobile && !hasSelectedOnce && !activeCharacterId && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <CharacterPanel
+            characters={CHARACTERS}
+            activeId={activeIdForPanel}
+            onSelect={(id) => {
+              setActiveCharacterId(id);
+              setMode("single");
+              setHasSelectedOnce(true);
+              setIsPanelOpen(false);
+            }}
+            currentLocationId={currentLocationId}
+            currentLayer={currentLayer}
+            groupContext={panelGroupContext}
+            onStartGroup={() => {
+              if (!currentLocationId) return;
+              setMode("group");
+              setHasSelectedOnce(true);
+              setIsPanelOpen(false);
+              setGroupHistories((prev) => {
+                if (prev[currentLocationId]?.length) return prev;
+                return {
+                  ...prev,
+                  [currentLocationId]: [
+                    {
+                      id: "init",
+                      role: "ai",
+                      content: "……場が、静かに立ち上がる。",
+                    },
+                  ],
+                };
+              });
+            }}
+            mode={mode}
+            fullScreen
+          />
+        </div>
+      )}
+
       {/* ===== Desktop ===== */}
       <div className="hidden lg:block">
         <CharacterPanel
