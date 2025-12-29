@@ -42,6 +42,9 @@ type Props = {
   /* ★ グループチャット関連 */
   groupContext?: GroupContext | null;
   onStartGroup?: () => void;
+
+  /** UI判定のみ */
+  mode?: "single" | "group";
 };
 
 /* =========================
@@ -57,6 +60,7 @@ export default function CharacterPanel({
   fullScreen = false,
   groupContext,
   onStartGroup,
+  mode = "single",
 }: Props) {
   const router = useRouter();
 
@@ -98,6 +102,21 @@ export default function CharacterPanel({
     });
     return Array.from(map.entries());
   }, [allCharacters]);
+
+  /* =========================
+     UI状態
+  ========================= */
+  const isGroupActive = useMemo(() => {
+    return Boolean(
+      mode === "group" &&
+        groupContext?.enabled &&
+        currentLocationId != null &&
+        groupContext.group.world?.location === currentLocationId
+    );
+  }, [mode, groupContext, currentLocationId]);
+
+  /** ★ 追加：グループ用 accent（JSON 由来） */
+  const groupAccent = groupContext?.group.ui?.accent;
 
   /* ========================= */
 
@@ -166,9 +185,20 @@ export default function CharacterPanel({
                   onClick={onStartGroup}
                   className={cn(
                     "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
-                    "border-white/20 hover:border-white/40 bg-black/30"
+                    isGroupActive
+                      ? "border-white/40 shadow-lg"
+                      : "border-white/20 hover:border-white/40 bg-black/30"
                   )}
                 >
+                  {isGroupActive && groupAccent && (
+                    <div
+                      className={cn(
+                        "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
+                        groupAccent
+                      )}
+                    />
+                  )}
+
                   <div className="relative z-10">
                     <div className="font-gensou text-base text-white">
                       {groupContext.group.name}
@@ -177,12 +207,16 @@ export default function CharacterPanel({
                       {groupContext.group.title}
                     </div>
                   </div>
+
+                  {isGroupActive && (
+                    <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
+                  )}
                 </button>
               )}
 
             {currentLocationId != null &&
               pcCharacters.map((ch) => {
-                const active = ch.id === activeId;
+                const active = mode !== "group" && ch.id === activeId;
                 const accent = ch.color?.accent;
 
                 return (
@@ -193,7 +227,8 @@ export default function CharacterPanel({
                       "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
                       active
                         ? "border-white/30 shadow-lg"
-                        : "border-white/10 hover:border-white/20"
+                        : "border-white/10 hover:border-white/20",
+                      mode === "group" && "opacity-80"
                     )}
                   >
                     {active && accent && (
@@ -223,79 +258,100 @@ export default function CharacterPanel({
           </>
         )}
 
-        {/* ---------- Mobile / Tablet ---------- */}
+        {/* ---------- Mobile ---------- */}
         {!isPC &&
-          mobileGroups.map(([locationId, chars]) => (
-            <div key={locationId} className="mb-4">
-              <div className="mb-2 px-2 text-xs text-white/50">
-                {locationId}
+          mobileGroups.map(([locationId, chars]) => {
+            const isThisGroupActive =
+              isGroupActive &&
+              groupContext?.group.world?.location === locationId;
+
+            return (
+              <div key={locationId} className="mb-4">
+                <div className="mb-2 px-2 text-xs text-white/50">
+                  {locationId}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {groupContext?.enabled &&
+                    groupContext.group.world.location === locationId &&
+                    onStartGroup && (
+                      <button
+                        onClick={onStartGroup}
+                        className={cn(
+                          "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                          isThisGroupActive
+                            ? "border-white/40 shadow-lg"
+                            : "border-white/20 hover:border-white/40 bg-black/30"
+                        )}
+                      >
+                        {isThisGroupActive && groupAccent && (
+                          <div
+                            className={cn(
+                              "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
+                              groupAccent
+                            )}
+                          />
+                        )}
+
+                        <div className="relative z-10">
+                          <div className="font-gensou text-base text-white">
+                            {groupContext.group.name}
+                          </div>
+                          <div className="mt-0.5 text-xs text-white/60">
+                            {groupContext.group.title}
+                          </div>
+                        </div>
+
+                        {isThisGroupActive && (
+                          <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
+                        )}
+                      </button>
+                    )}
+
+                  {chars.map((ch) => {
+                    const active = mode !== "group" && ch.id === activeId;
+                    const accent = ch.color?.accent;
+
+                    return (
+                      <button
+                        key={ch.id}
+                        onClick={() => onSelect(ch.id)}
+                        className={cn(
+                          "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
+                          active
+                            ? "border-white/30 shadow-lg"
+                            : "border-white/10 hover:border-white/20",
+                          mode === "group" && "opacity-80"
+                        )}
+                      >
+                        {active && accent && (
+                          <div
+                            className={cn(
+                              "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
+                              accent
+                            )}
+                          />
+                        )}
+
+                        <div className="relative z-10">
+                          <div className="font-gensou text-base text-white">
+                            {ch.name}
+                          </div>
+                          <div className="mt-0.5 text-xs text-white/60">
+                            {ch.title}
+                          </div>
+                        </div>
+
+                        {active && (
+                          <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-
-              <div className="flex flex-col gap-3">
-                {/* ★ グループチャットカード（Mobile） */}
-                {groupContext?.enabled &&
-                  groupContext.group.world.location === locationId &&
-                  onStartGroup && (
-                    <button
-                      onClick={onStartGroup}
-                      className={cn(
-                        "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
-                        "border-white/20 hover:border-white/40 bg-black/30"
-                      )}
-                    >
-                      <div className="relative z-10">
-                        <div className="font-gensou text-base text-white">
-                          {groupContext.group.name}
-                        </div>
-                        <div className="mt-0.5 text-xs text-white/60">
-                          {groupContext.group.title}
-                        </div>
-                      </div>
-                    </button>
-                  )}
-
-                {chars.map((ch) => {
-                  const active = ch.id === activeId;
-                  const accent = ch.color?.accent;
-
-                  return (
-                    <button
-                      key={ch.id}
-                      onClick={() => onSelect(ch.id)}
-                      className={cn(
-                        "relative overflow-hidden rounded-xl border px-4 py-3 text-left transition-all",
-                        active
-                          ? "border-white/30 shadow-lg"
-                          : "border-white/10 hover:border-white/20"
-                      )}
-                    >
-                      {active && accent && (
-                        <div
-                          className={cn(
-                            "absolute inset-0 -z-10 bg-gradient-to-br blur-xl",
-                            accent
-                          )}
-                        />
-                      )}
-
-                      <div className="relative z-10">
-                        <div className="font-gensou text-base text-white">
-                          {ch.name}
-                        </div>
-                        <div className="mt-0.5 text-xs text-white/60">
-                          {ch.title}
-                        </div>
-                      </div>
-
-                      {active && (
-                        <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/80" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
 
       {/* フッター */}

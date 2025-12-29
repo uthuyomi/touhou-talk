@@ -1,4 +1,3 @@
-// components/ChatPane.tsx
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
@@ -30,11 +29,15 @@ type Character = {
   };
 };
 
-/** グループチャット文脈（UI最小） */
+/** ★ グループチャット文脈（UI用に拡張） */
 type GroupContext = {
   enabled: boolean;
   label: string;
   participants: Character[];
+  ui?: {
+    chatBackground?: string;
+    accent?: string;
+  };
 };
 
 /* =========================
@@ -42,21 +45,11 @@ type GroupContext = {
 ========================= */
 
 type Props = {
-  /** 単体チャット用キャラ */
   character: Character;
-
-  /** 表示するメッセージ（speakerId 含む場合あり） */
   messages: Message[];
-
-  /** ユーザー送信（文字列のみ） */
   onSend: (content: string) => void;
-
-  /** AI 返信追加（文字列のみ・設計固定） */
-  onAiMessage: (content: string) => void;
-
+  onAiMessage: (content: string, speakerId?: string) => void;
   onOpenPanel: () => void;
-
-  /** モード */
   mode?: "single" | "group";
   groupContext?: GroupContext | null;
 };
@@ -85,19 +78,27 @@ export default function ChatPane({
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
   /* =========================
-     speakerId → Character 解決（表示専用）
+     speakerId → Character 解決
   ========================= */
 
   const speakerMap = useMemo(() => {
     if (mode !== "group" || !groupContext) return null;
     return new Map(groupContext.participants.map((c) => [c.id, c]));
   }, [mode, groupContext]);
+
+  /* =========================
+     背景決定（single / group）
+  ========================= */
+
+  const backgroundImage =
+    mode === "group"
+      ? groupContext?.ui?.chatBackground
+      : character.ui.chatBackground;
 
   /* =========================
      メッセージ送信
@@ -110,7 +111,6 @@ export default function ChatPane({
     setInput("");
     setIsLoading(true);
 
-    // user メッセージは即 UI 反映
     onSend(content);
 
     try {
@@ -136,19 +136,13 @@ export default function ChatPane({
 
       if (!res.ok) throw new Error("API request failed");
 
-      /**
-       * single:
-       *  { content }
-       *
-       * group:
-       *  { content, speakerId }
-       *
-       * ※ ChatPane は speakerId を保持しない
-       */
       const data = await res.json();
 
-      // ★ 設計固定：文字列だけ親へ返す
-      onAiMessage(data.content);
+      if (mode === "group") {
+        onAiMessage(data.content, data.speakerId);
+      } else {
+        onAiMessage(data.content);
+      }
     } catch (error) {
       console.error("[ChatPane] API Error:", error);
       onAiMessage("……少し調子が悪いみたい。また後で話しかけて。");
@@ -161,13 +155,15 @@ export default function ChatPane({
 
   return (
     <main className="relative z-10 flex h-dvh flex-1 flex-col">
-      {/* 背景（単体のみ） */}
-      {mode === "single" && character.ui.chatBackground && (
+      {/* =========================
+          背景（single / group 両対応）
+         ========================= */}
+      {backgroundImage && (
         <div
           className="absolute inset-0 -z-10 bg-cover bg-center"
           style={{
-            backgroundImage: `url(${character.ui.chatBackground})`,
-            filter: "blur(1px) brightness(1.0)",
+            backgroundImage: `url(${backgroundImage})`,
+            filter: "blur(1px) brightness(0.95)",
           }}
         />
       )}
@@ -176,6 +172,17 @@ export default function ChatPane({
           ヘッダー
          ========================= */}
       <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
+        {/* ★ グループ accent */}
+        {mode === "group" && groupContext?.ui?.accent && (
+          <div
+            className={cn(
+              "absolute inset-0 -z-10 bg-gradient-to-br",
+              groupContext.ui.accent
+            )}
+          />
+        )}
+
+        {/* 単体キャラ accent */}
         {mode === "single" && character.color?.accent && (
           <div
             className={cn(
@@ -210,7 +217,6 @@ export default function ChatPane({
           .filter((m) => m.id !== "init")
           .map((msg) => {
             const isUser = msg.role === "user";
-
             const speaker =
               mode === "group" && msg.speakerId && speakerMap
                 ? speakerMap.get(msg.speakerId)

@@ -10,7 +10,8 @@
     },
     "participants": ["remilia", "flandre"],
     "ui": {
-      "label": "グループチャット",
+      "chatBackground": "/background/group_scarlet_mansion.png",
+      "label": "紅魔館",
       "icon": "👥",
       "accent": "from-rose-700/30 to-purple-800/20"
     }
@@ -27,7 +28,8 @@
     },
     "participants": ["marisa", "alice"],
     "ui": {
-      "label": "グループチャット",
+      "chatBackground": "/background/roup_forest_of_magic.png",
+      "label": "魔法の森",
       "icon": "👥",
       "accent": "from-indigo-500/30 to-emerald-600/20"
     }
@@ -44,7 +46,8 @@
     },
     "participants": ["aya", "momiji"],
     "ui": {
-      "label": "グループチャット",
+      "chatBackground": "/background/group_youkai_mountain.png",
+      "label": "妖怪の山",
       "icon": "👥",
       "accent": "from-sky-500/30 to-gray-600/20"
     }
@@ -61,7 +64,8 @@
     },
     "participants": ["satori", "koishi"],
     "ui": {
-      "label": "グループチャット",
+      "chatBackground": "/background/group_chireiden.png",
+      "label": "地霊殿",
       "icon": "👥",
       "accent": "from-violet-700/30 to-lime-500/20"
     }
@@ -78,7 +82,8 @@
     },
     "participants": ["reimu"],
     "ui": {
-      "label": "場の対話",
+      "chatBackground": "/background/group_hakurei_shrine.png",
+      "label": "博麗神社",
       "icon": "⛩️",
       "accent": "from-red-600/30 to-pink-500/20"
     }
