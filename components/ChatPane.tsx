@@ -121,6 +121,7 @@ export default function ChatPane({
           ? {
               context: groupContext,
               userMessage: content,
+              participants: groupContext?.participants.map((c) => c.id) ?? [],
             }
           : {
               characterId: character.id,

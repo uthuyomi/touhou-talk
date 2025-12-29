@@ -3,55 +3,54 @@
 // 🧠 グループチャット専用 API
 // --------------------------------------------------
 // 役割：
-// - グループチャットの「次の発話」を生成する
-// - 誰が喋るかはロジック（将来は AI）に委ねる
-// - UI は speakerId を見て話者を表示する
+// - UI → persona-core (Fly.io) の橋渡し
+// - グループチャットの次の発話を取得する
 //
 // 注意：
-// - 単体チャット (/api/chat) とは完全分離
-// - この API は「1リクエスト = 1発話」
-// - 履歴の管理は UI（親コンポーネント）側で行う
+// - GroupContext の中身には最小限しか依存しない
+// - 状態管理・話者決定は persona-core 側が唯一の正本
 //
 
 import { NextRequest, NextResponse } from "next/server";
-import { GroupContext, initializeGroupContext } from "@/lib/chat/groupContext";
+import { GroupContext } from "@/lib/chat/groupContext";
 
 // ==================================================
 // Request / Response 型
 // ==================================================
 
-/**
- * クライアントから送られてくる payload
- */
 type GroupChatRequest = {
-  /**
-   * 現在のグループコンテキスト
-   * - layer
-   * - locationId
-   * - participants
-   * - history
-   * - currentSpeakerId
-   */
   context: GroupContext;
-
-  /**
-   * ユーザー入力
-   * - グループ全体に向けた発話
-   */
   userMessage: string;
 };
 
-/**
- * API が返すレスポンス
- *
- * ※ 現在は単発
- * ※ 将来は配列（複数発話）に拡張予定
- */
 type GroupChatResponse = {
   role: "ai";
   speakerId: string;
   content: string;
 };
+
+// ==================================================
+// 内部補助型（any 回避）
+// ==================================================
+
+type ParticipantLike =
+  | string
+  | {
+      id: string;
+    };
+
+type GroupContextWithParticipants = GroupContext & {
+  participants?: ParticipantLike[];
+};
+
+// ==================================================
+// persona-core (Fly.io)
+// ★ group-chat 専用 URL をそのまま使う
+// ==================================================
+
+const PERSONA_CORE_GROUP_URL =
+  process.env.PERSONA_OS_GROUP_URL ??
+  "https://touhou-talk-core.fly.dev/group-chat";
 
 // ==================================================
 // POST handler
@@ -60,62 +59,78 @@ type GroupChatResponse = {
 export async function POST(req: NextRequest) {
   try {
     // ----------------------------------------------
-    // 1. リクエストをパース
+    // 1. parse request
     // ----------------------------------------------
     const body = (await req.json()) as GroupChatRequest;
     const { context, userMessage } = body;
 
+    // GroupContext は enabled のみ確認
     if (!context || !context.enabled) {
       return NextResponse.json(
-        {
-          error: "Group context is not enabled",
-        },
+        { error: "Group context is not enabled" },
         { status: 400 }
       );
     }
 
     // ----------------------------------------------
-    // 2. グループ初期化（非破壊）
-    // - 初回なら話者を決定
-    // - init メッセージを内部的に用意
+    // participants を安全に抽出（any 不使用）
     // ----------------------------------------------
-    const initialized = initializeGroupContext(context);
+    const ctx = context as GroupContextWithParticipants;
 
-    // ----------------------------------------------
-    // 3. 今回の話者を決定
-    //
-    // 現段階：
-    // - currentSpeakerId をそのまま使用
-    //
-    // 将来：
-    // - history + userMessage を元に
-    //   「誰が反応するか」を AI に委ねる
-    // ----------------------------------------------
-    const speakerId = initialized.currentSpeakerId;
+    const participants: string[] = Array.isArray(ctx.participants)
+      ? ctx.participants.map((p) => (typeof p === "string" ? p : p.id))
+      : [];
 
-    if (!speakerId) {
+    if (participants.length === 0) {
       return NextResponse.json(
-        {
-          error: "No speaker available",
-        },
+        { error: "No participants provided" },
         { status: 400 }
       );
     }
 
     // ----------------------------------------------
-    // 4. 仮の AI 応答生成
-    //
-    // ※ ここは後で LLM 呼び出しに置き換える
+    // 2. persona-core へ転送
     // ----------------------------------------------
-    const aiContent = `……${userMessage}か。少し考えさせてくれ。`;
+    const payload = {
+      session_id: "ui-group-session",
+      group_id: "ui-group",
+      participants,
+      user_text: userMessage,
+      client_state: {},
+    };
+
+    const res = await fetch(PERSONA_CORE_GROUP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`persona-core error: ${text}`);
+    }
+
+    const data = await res.json();
 
     // ----------------------------------------------
-    // 5. レスポンス生成（UI が期待する最小形）
+    // 3. UI が期待する最小形に変換
     // ----------------------------------------------
+    const first = data?.utterances?.[0];
+
+    if (!first) {
+      return NextResponse.json({
+        role: "ai",
+        speakerId: "system",
+        content: "……誰も反応しなかった。",
+      });
+    }
+
     const response: GroupChatResponse = {
       role: "ai",
-      speakerId,
-      content: aiContent,
+      speakerId: first.speaker_id,
+      content: first.content,
     };
 
     return NextResponse.json(response);
