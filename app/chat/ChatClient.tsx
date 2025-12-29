@@ -18,13 +18,34 @@ type Message = {
   id: string;
   role: "user" | "ai";
   content: string;
+
+  /** ★ グループ用：誰が喋ったか（ChatPane と整合） */
+  speakerId?: string;
 };
 
 /** CharacterPanel に渡す最小 groupContext */
-type GroupContext = {
+type PanelGroupContext = {
   enabled: boolean;
   label: string;
   group: GroupDef;
+};
+
+/** ChatPane に渡す最小 groupContext（ChatPane と整合） */
+type ChatGroupContext = {
+  enabled: boolean;
+  label: string;
+  participants: Array<{
+    id: string;
+    name: string;
+    title: string;
+    ui: {
+      chatBackground?: string | null;
+      placeholder: string;
+    };
+    color?: {
+      accent?: string;
+    };
+  }>;
 };
 
 /* =========================
@@ -56,7 +77,13 @@ export default function ChatClient() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   /* =========================
-     キャラ別チャット履歴
+     ★ モード（単体 / グループ）
+  ========================= */
+
+  const [mode, setMode] = useState<"single" | "group">("single");
+
+  /* =========================
+     キャラ別チャット履歴（単体）
   ========================= */
 
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(
@@ -76,6 +103,15 @@ export default function ChatClient() {
   );
 
   /* =========================
+     ★ グループチャット履歴（場所ごと）
+     - 現段階は「1ロケーション1グループ」前提なので locationId キーで持つ
+  ========================= */
+
+  const [groupHistories, setGroupHistories] = useState<
+    Record<string, Message[]>
+  >(() => ({}));
+
+  /* =========================
      activeCharacter
   ========================= */
 
@@ -84,59 +120,11 @@ export default function ChatClient() {
     return CHARACTERS[activeCharacterId] ?? null;
   }, [activeCharacterId]);
 
-  const messages = useMemo(() => {
-    if (!activeCharacterId) return [];
-    return chatHistories[activeCharacterId] ?? [];
-  }, [chatHistories, activeCharacterId]);
-
   /* =========================
-     メッセージ操作
+     ★ グループチャット文脈（CharacterPanel 用 / 正規）
   ========================= */
 
-  const handleSend = useCallback(
-    (content: string) => {
-      if (!activeCharacterId) return;
-      setChatHistories((prev) => ({
-        ...prev,
-        [activeCharacterId]: [
-          ...prev[activeCharacterId],
-          { id: crypto.randomUUID(), role: "user", content },
-        ],
-      }));
-    },
-    [activeCharacterId]
-  );
-
-  const handleAiMessage = useCallback(
-    (content: string) => {
-      if (!activeCharacterId) return;
-      setChatHistories((prev) => ({
-        ...prev,
-        [activeCharacterId]: [
-          ...prev[activeCharacterId],
-          { id: crypto.randomUUID(), role: "ai", content },
-        ],
-      }));
-    },
-    [activeCharacterId]
-  );
-
-  /* =========================
-     Mobile 判定
-  ========================= */
-
-  const [isMobile] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 1023px)").matches;
-  });
-
-  const isCharacterSelected = Boolean(activeCharacterId);
-
-  /* =========================
-     ★ グループチャット文脈（正規）
-  ========================= */
-
-  const groupContext = useMemo<GroupContext | null>(() => {
+  const panelGroupContext = useMemo<PanelGroupContext | null>(() => {
     if (!currentLayer || !currentLocationId) return null;
 
     const groups = getGroupsByLocation(currentLayer, currentLocationId);
@@ -152,6 +140,176 @@ export default function ChatClient() {
     };
   }, [currentLayer, currentLocationId]);
 
+  /* =========================
+     ★ グループチャット文脈（ChatPane 用 / participants 実体化）
+  ========================= */
+
+  const chatGroupContext = useMemo<ChatGroupContext | null>(() => {
+    if (!panelGroupContext?.enabled) return null;
+
+    const participants = panelGroupContext.group.participants
+      .map((id) => CHARACTERS[id])
+      .filter(Boolean);
+
+    return {
+      enabled: true,
+      label: panelGroupContext.group.ui.label,
+      participants,
+    };
+  }, [panelGroupContext]);
+
+  /* =========================
+     表示用メッセージ
+     - single: 選択キャラの履歴
+     - group : 現ロケーションの履歴
+  ========================= */
+
+  const messages = useMemo(() => {
+    if (mode === "group") {
+      if (!currentLocationId) return [];
+      return groupHistories[currentLocationId] ?? [];
+    }
+
+    if (!activeCharacterId) return [];
+    return chatHistories[activeCharacterId] ?? [];
+  }, [mode, groupHistories, currentLocationId, chatHistories, activeCharacterId]);
+
+  /* =========================
+     メッセージ操作
+  ========================= */
+
+  const handleSend = useCallback(
+    (content: string) => {
+      // group
+      if (mode === "group") {
+        if (!currentLocationId) return;
+
+        setGroupHistories((prev) => ({
+          ...prev,
+          [currentLocationId]: [
+            ...(prev[currentLocationId] ?? []),
+            { id: crypto.randomUUID(), role: "user", content },
+          ],
+        }));
+        return;
+      }
+
+      // single
+      if (!activeCharacterId) return;
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeCharacterId]: [
+          ...prev[activeCharacterId],
+          { id: crypto.randomUUID(), role: "user", content },
+        ],
+      }));
+    },
+    [mode, currentLocationId, activeCharacterId]
+  );
+
+  /**
+   * ✅ 修正点：
+   * ChatPane の onAiMessage は (content: string) => void
+   * なのでここも string を受け取り、Message をこの中で生成して state に積む。
+   * （speakerId は今は ChatPane 側で保持/表示してるだけなので、現段階では触らない）
+   */
+  const handleAiMessage = useCallback(
+    (content: string) => {
+      const msg: Message = {
+        id: crypto.randomUUID(),
+        role: "ai",
+        content,
+      };
+
+      // group
+      if (mode === "group") {
+        if (!currentLocationId) return;
+
+        setGroupHistories((prev) => ({
+          ...prev,
+          [currentLocationId]: [...(prev[currentLocationId] ?? []), msg],
+        }));
+        return;
+      }
+
+      // single
+      if (!activeCharacterId) return;
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeCharacterId]: [...prev[activeCharacterId], msg],
+      }));
+    },
+    [mode, currentLocationId, activeCharacterId]
+  );
+
+  /* =========================
+     Mobile 判定
+  ========================= */
+
+  const [isMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 1023px)").matches;
+  });
+
+  const isCharacterSelected = Boolean(activeCharacterId);
+
+  /* =========================
+     ★ グループ開始（UIは今のまま / モードだけ切替）
+  ========================= */
+
+  const startGroupChat = useCallback(() => {
+    if (!panelGroupContext?.enabled) return;
+    if (!currentLocationId) return;
+
+    setMode("group");
+
+    // グループ側が初回なら、空でも良いが「init」を入れたいならここで入れる
+    setGroupHistories((prev) => {
+      if (prev[currentLocationId]?.length) return prev;
+      return {
+        ...prev,
+        [currentLocationId]: [
+          {
+            id: "init",
+            role: "ai",
+            content: "……場が、静かに立ち上がる。",
+          },
+        ],
+      };
+    });
+
+    // パネル操作
+    setHasSelectedOnce(true);
+    setIsPanelOpen(false);
+  }, [panelGroupContext, currentLocationId]);
+
+  /* =========================
+     ★ 単体に戻す（キャラ選択時に自動で戻す）
+  ========================= */
+
+  const selectCharacter = useCallback((id: string) => {
+    setActiveCharacterId(id);
+    setMode("single");
+    setHasSelectedOnce(true);
+    setIsPanelOpen(false);
+  }, []);
+
+  /* =========================
+     ChatPane に渡す “キャラ”
+     - group でも placeholder が必要なので、参加者の先頭 or 現在選択キャラを使う
+  ========================= */
+
+  const chatPaneCharacter = useMemo(() => {
+    if (mode !== "group") return activeCharacter;
+
+    const first =
+      chatGroupContext?.participants && chatGroupContext.participants[0]
+        ? chatGroupContext.participants[0]
+        : null;
+
+    return first ?? activeCharacter;
+  }, [mode, chatGroupContext, activeCharacter]);
+
   /* ========================= */
 
   return (
@@ -166,16 +324,12 @@ export default function ChatClient() {
               characters={CHARACTERS}
               activeId=""
               onSelect={(id) => {
-                setActiveCharacterId(id);
-                setHasSelectedOnce(true);
-                setIsPanelOpen(false);
+                selectCharacter(id);
               }}
               currentLocationId={currentLocationId}
               currentLayer={currentLayer}
-              groupContext={groupContext}
-              onStartGroup={() => {
-                console.log("start group chat", groupContext);
-              }}
+              groupContext={panelGroupContext}
+              onStartGroup={startGroupChat}
             />
           </div>
         </div>
@@ -196,15 +350,12 @@ export default function ChatClient() {
               characters={CHARACTERS}
               activeId={activeCharacterId ?? ""}
               onSelect={(id) => {
-                setActiveCharacterId(id);
-                setIsPanelOpen(false);
+                selectCharacter(id);
               }}
               currentLocationId={currentLocationId}
               currentLayer={currentLayer}
-              groupContext={groupContext}
-              onStartGroup={() => {
-                console.log("start group chat", groupContext);
-              }}
+              groupContext={panelGroupContext}
+              onStartGroup={startGroupChat}
             />
           </div>
 
@@ -224,26 +375,29 @@ export default function ChatClient() {
         <CharacterPanel
           characters={CHARACTERS}
           activeId={activeCharacterId ?? ""}
-          onSelect={setActiveCharacterId}
+          onSelect={(id) => {
+            // CharacterPanel の onSelect シグネチャに合わせる
+            selectCharacter(id);
+          }}
           currentLocationId={currentLocationId}
           currentLayer={currentLayer}
-          groupContext={groupContext}
-          onStartGroup={() => {
-            console.log("start group chat", groupContext);
-          }}
+          groupContext={panelGroupContext}
+          onStartGroup={startGroupChat}
         />
       </div>
 
       {/* =========================
-          単体チャット
+          チャット
          ========================= */}
-      {activeCharacter && (
+      {chatPaneCharacter && (
         <ChatPane
-          character={activeCharacter}
+          character={chatPaneCharacter}
           messages={messages}
           onSend={handleSend}
           onAiMessage={handleAiMessage}
           onOpenPanel={() => setIsPanelOpen(true)}
+          mode={mode}
+          groupContext={mode === "group" ? chatGroupContext : null}
         />
       )}
     </div>

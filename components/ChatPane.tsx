@@ -1,7 +1,7 @@
 // components/ChatPane.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 /* =========================
@@ -12,6 +12,9 @@ type Message = {
   id: string;
   role: "user" | "ai";
   content: string;
+
+  /** グループ用：誰が喋ったか（表示専用） */
+  speakerId?: string;
 };
 
 type Character = {
@@ -27,19 +30,35 @@ type Character = {
   };
 };
 
+/** グループチャット文脈（UI最小） */
+type GroupContext = {
+  enabled: boolean;
+  label: string;
+  participants: Character[];
+};
+
 /* =========================
    Props
 ========================= */
 
 type Props = {
+  /** 単体チャット用キャラ */
   character: Character;
+
+  /** 表示するメッセージ（speakerId 含む場合あり） */
   messages: Message[];
 
-  /** UI → Page に渡すのは文字列だけ */
+  /** ユーザー送信（文字列のみ） */
   onSend: (content: string) => void;
+
+  /** AI 返信追加（文字列のみ・設計固定） */
   onAiMessage: (content: string) => void;
 
   onOpenPanel: () => void;
+
+  /** モード */
+  mode?: "single" | "group";
+  groupContext?: GroupContext | null;
 };
 
 /* =========================
@@ -52,6 +71,8 @@ export default function ChatPane({
   onSend,
   onAiMessage,
   onOpenPanel,
+  mode = "single",
+  groupContext,
 }: Props) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +91,15 @@ export default function ChatPane({
   }, [input]);
 
   /* =========================
+     speakerId → Character 解決（表示専用）
+  ========================= */
+
+  const speakerMap = useMemo(() => {
+    if (mode !== "group" || !groupContext) return null;
+    return new Map(groupContext.participants.map((c) => [c.id, c]));
+  }, [mode, groupContext]);
+
+  /* =========================
      メッセージ送信
   ========================= */
 
@@ -80,27 +110,44 @@ export default function ChatPane({
     setInput("");
     setIsLoading(true);
 
-    // UI即反映
+    // user メッセージは即 UI 反映
     onSend(content);
 
     try {
-      const res = await fetch("/api/chat", {
+      const endpoint = mode === "group" ? "/api/group-chat" : "/api/chat";
+
+      const payload =
+        mode === "group"
+          ? {
+              context: groupContext,
+              userMessage: content,
+            }
+          : {
+              characterId: character.id,
+              messages: [...messages, { role: "user", content }],
+            };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          characterId: character.id,
-          messages: [...messages, { role: "user", content }],
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("API request failed");
 
-      const aiReply = (await res.json()) as {
-        role: "ai";
-        content: string;
-      };
+      /**
+       * single:
+       *  { content }
+       *
+       * group:
+       *  { content, speakerId }
+       *
+       * ※ ChatPane は speakerId を保持しない
+       */
+      const data = await res.json();
 
-      onAiMessage(aiReply.content);
+      // ★ 設計固定：文字列だけ親へ返す
+      onAiMessage(data.content);
     } catch (error) {
       console.error("[ChatPane] API Error:", error);
       onAiMessage("……少し調子が悪いみたい。また後で話しかけて。");
@@ -109,10 +156,12 @@ export default function ChatPane({
     }
   };
 
+  /* ========================= */
+
   return (
     <main className="relative z-10 flex h-dvh flex-1 flex-col">
-      {/* 背景 */}
-      {character.ui.chatBackground && (
+      {/* 背景（単体のみ） */}
+      {mode === "single" && character.ui.chatBackground && (
         <div
           className="absolute inset-0 -z-10 bg-cover bg-center"
           style={{
@@ -126,7 +175,7 @@ export default function ChatPane({
           ヘッダー
          ========================= */}
       <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
-        {character.color?.accent && (
+        {mode === "single" && character.color?.accent && (
           <div
             className={cn(
               "absolute inset-0 -z-10 bg-gradient-to-br opacity-70",
@@ -135,7 +184,6 @@ export default function ChatPane({
           />
         )}
 
-        {/* モバイル：キャラパネルボタン */}
         <button
           onClick={onOpenPanel}
           className="lg:hidden absolute right-4 top-4 z-50 rounded-lg px-2 py-1 text-white/80 hover:bg-white/10"
@@ -144,19 +192,28 @@ export default function ChatPane({
         </button>
 
         <div className="pr-10">
-          <h2 className="font-gensou text-lg text-white">{character.name}</h2>
-          <p className="text-xs text-white/50">{character.title}</p>
+          <h2 className="font-gensou text-lg text-white">
+            {mode === "group" ? groupContext?.label : character.name}
+          </h2>
+          <p className="text-xs text-white/50">
+            {mode === "group" ? "グループチャット" : character.title}
+          </p>
         </div>
       </header>
 
       {/* =========================
-          チャット
+          チャット表示
          ========================= */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
         {messages
           .filter((m) => m.id !== "init")
           .map((msg) => {
             const isUser = msg.role === "user";
+
+            const speaker =
+              mode === "group" && msg.speakerId && speakerMap
+                ? speakerMap.get(msg.speakerId)
+                : null;
 
             return (
               <div
@@ -166,15 +223,23 @@ export default function ChatPane({
                   isUser ? "justify-end" : "justify-start"
                 )}
               >
-                <div
-                  className={cn(
-                    "gensou-card max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                    isUser
-                      ? "chat-user rounded-br-none"
-                      : "chat-ai rounded-bl-none"
+                <div className="max-w-[70%]">
+                  {!isUser && mode === "group" && speaker && (
+                    <div className="mb-1 text-xs text-white/60">
+                      {speaker.name}
+                    </div>
                   )}
-                >
-                  {msg.content}
+
+                  <div
+                    className={cn(
+                      "gensou-card rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                      isUser
+                        ? "chat-user rounded-br-none"
+                        : "chat-ai rounded-bl-none"
+                    )}
+                  >
+                    {msg.content}
+                  </div>
                 </div>
               </div>
             );
