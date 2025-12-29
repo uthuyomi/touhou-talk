@@ -27,13 +27,10 @@ type PanelGroupContext = {
 type ChatGroupContext = {
   enabled: boolean;
   label: string;
-
-  // ChatPane 側の型互換を壊さない（null を入れない）
   ui: {
     chatBackground?: string;
     accent?: string;
   };
-
   participants: Array<{
     id: string;
     name: string;
@@ -125,7 +122,6 @@ export default function ChatClient() {
       .map((id) => CHARACTERS[id])
       .filter(Boolean);
 
-    // GroupDef の ui 型が追従してなくても、このファイル内だけで安全に拾う
     const groupUi = panelGroupContext.group.ui as unknown as {
       chatBackground?: string | null;
       accent?: string;
@@ -135,7 +131,7 @@ export default function ChatClient() {
       enabled: true,
       label: panelGroupContext.group.ui.label,
       ui: {
-        chatBackground: groupUi.chatBackground ?? undefined, // null → undefined
+        chatBackground: groupUi.chatBackground ?? undefined,
         accent: groupUi.accent,
       },
       participants,
@@ -143,14 +139,13 @@ export default function ChatClient() {
   }, [panelGroupContext]);
 
   /* =========================
-     ★ ここがメッセージ表示の本体（空関数を撤去）
+     メッセージ処理
   ========================= */
 
   const handleSend = useCallback(
     (content: string) => {
       if (mode === "group") {
         if (!currentLocationId) return;
-
         setGroupHistories((prev) => ({
           ...prev,
           [currentLocationId]: [
@@ -162,7 +157,6 @@ export default function ChatClient() {
       }
 
       if (!activeCharacterId) return;
-
       setChatHistories((prev) => ({
         ...prev,
         [activeCharacterId]: [
@@ -185,7 +179,6 @@ export default function ChatClient() {
 
       if (mode === "group") {
         if (!currentLocationId) return;
-
         setGroupHistories((prev) => ({
           ...prev,
           [currentLocationId]: [...(prev[currentLocationId] ?? []), msg],
@@ -194,7 +187,6 @@ export default function ChatClient() {
       }
 
       if (!activeCharacterId) return;
-
       setChatHistories((prev) => ({
         ...prev,
         [activeCharacterId]: [...(prev[activeCharacterId] ?? []), msg],
@@ -207,6 +199,7 @@ export default function ChatClient() {
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden">
+      {/* ===== Desktop ===== */}
       <div className="hidden lg:block">
         <CharacterPanel
           characters={CHARACTERS}
@@ -221,17 +214,18 @@ export default function ChatClient() {
           groupContext={panelGroupContext}
           onStartGroup={() => {
             if (!currentLocationId) return;
-
             setMode("group");
             setHasSelectedOnce(true);
-
-            // 初回だけ init を入れる（表示が空にならない）
             setGroupHistories((prev) => {
               if (prev[currentLocationId]?.length) return prev;
               return {
                 ...prev,
                 [currentLocationId]: [
-                  { id: "init", role: "ai", content: "……場が、静かに立ち上がる。" },
+                  {
+                    id: "init",
+                    role: "ai",
+                    content: "……場が、静かに立ち上がる。",
+                  },
                 ],
               };
             });
@@ -240,6 +234,52 @@ export default function ChatClient() {
         />
       </div>
 
+      {/* ===== Mobile Panel ===== */}
+      {isPanelOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            onClick={() => setIsPanelOpen(false)}
+          />
+          <div className="fixed left-0 top-0 z-50 h-full w-80 lg:hidden">
+            <CharacterPanel
+              characters={CHARACTERS}
+              activeId={activeIdForPanel}
+              onSelect={(id) => {
+                setActiveCharacterId(id);
+                setMode("single");
+                setHasSelectedOnce(true);
+                setIsPanelOpen(false);
+              }}
+              currentLocationId={currentLocationId}
+              currentLayer={currentLayer}
+              groupContext={panelGroupContext}
+              onStartGroup={() => {
+                if (!currentLocationId) return;
+                setMode("group");
+                setHasSelectedOnce(true);
+                setIsPanelOpen(false);
+                setGroupHistories((prev) => {
+                  if (prev[currentLocationId]?.length) return prev;
+                  return {
+                    ...prev,
+                    [currentLocationId]: [
+                      {
+                        id: "init",
+                        role: "ai",
+                        content: "……場が、静かに立ち上がる。",
+                      },
+                    ],
+                  };
+                });
+              }}
+              mode={mode}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ===== Chat ===== */}
       {activeCharacter && (
         <ChatPane
           character={activeCharacter}
