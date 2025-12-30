@@ -53,6 +53,18 @@ const PERSONA_CORE_GROUP_URL =
   "https://touhou-talk-core.fly.dev/group-chat";
 
 // ==================================================
+// utility
+// ==================================================
+
+function stripSpeakerPrefix(content: string, speakerId?: string): string {
+  if (!speakerId) return content;
+
+  const pattern = new RegExp(`^${speakerId}\\s*[:：]\\s*`, "i");
+
+  return content.replace(pattern, "");
+}
+
+// ==================================================
 // POST handler
 // ==================================================
 
@@ -130,7 +142,7 @@ export async function POST(req: NextRequest) {
     const response: GroupChatResponse = {
       role: "ai",
       speakerId: first.speaker_id,
-      content: first.content,
+      content: stripSpeakerPrefix(first.content, first.speaker_id),
     };
 
     return NextResponse.json(response);

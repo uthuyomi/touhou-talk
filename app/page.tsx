@@ -51,17 +51,8 @@ export default function TopPage() {
     setFog(true);
     setLoading(true);
 
-    // PC / Mobile 判定（Tailwind lg と同基準）
-    const isPC = window.matchMedia("(min-width: 1024px)").matches;
-
     setTimeout(() => {
-      if (isPC) {
-        // PC → マップ
-        router.push("/map/gensokyo");
-      } else {
-        // スマホ・タブレット → 直接チャット
-        router.push("/chat");
-      }
+       router.push("/map/gensokyo");
     }, 1200); // 儀式時間
   };
 

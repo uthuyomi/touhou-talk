@@ -1,10 +1,9 @@
-// components/map/WorldMap.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import type { LayerId, MapLocation } from "@/lib/map/locations";
+import { useEffect, useMemo, useState } from "react";
+import type { LayerId, MapLocation, DeviceType } from "@/lib/map/locations";
 import { CHARACTERS } from "@/data/characters";
 
 /* =========================
@@ -20,17 +19,47 @@ type Character = {
   };
 };
 
+type BackgroundSrc = {
+  sp: string;
+  tablet: string;
+  pc: string;
+};
+
 type Props = {
   layer: LayerId;
-  backgroundSrc: string;
+  backgroundSrc: BackgroundSrc;
   locations: MapLocation[];
 };
+
+/* =========================
+ * Device hook
+ * ========================= */
+
+function useDevice(): DeviceType {
+  const [device, setDevice] = useState<DeviceType>("pc");
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w <= 640) setDevice("sp");
+      else if (w <= 1024) setDevice("tablet");
+      else setDevice("pc");
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return device;
+}
 
 /* =========================
  * Component
  * ========================= */
 
 export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
+  const device = useDevice();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const active = useMemo(
@@ -76,7 +105,7 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
       {/* 背景 */}
       <div className="absolute inset-0">
         <Image
-          src={backgroundSrc}
+          src={backgroundSrc[device]}
           alt={`${layer} map`}
           fill
           priority
@@ -113,6 +142,9 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
 
           const isActive = activeId === loc.id;
 
+          // ★ device 対応 position 解決（fallback: pc）
+          const pos = loc.pos[device] ?? loc.pos.pc;
+
           return (
             <button
               key={loc.id}
@@ -120,11 +152,10 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
               onClick={() => setActiveId(loc.id)}
               className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group"
               style={{
-                left: `${loc.pos.x}%`,
-                top: `${loc.pos.y}%`,
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
               }}
             >
-              {/* 外周リング */}
               <span
                 className={[
                   "absolute rounded-full",
@@ -134,7 +165,6 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
                 ].join(" ")}
               />
 
-              {/* コア */}
               <span
                 className={[
                   "relative rounded-full transition",
@@ -144,7 +174,6 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
                 ].join(" ")}
               />
 
-              {/* ラベル */}
               <span
                 className={[
                   "mt-1 px-3 py-1 rounded-md text-sm whitespace-nowrap",
@@ -185,7 +214,6 @@ export default function WorldMap({ layer, backgroundSrc, locations }: Props) {
                       "hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(255,255,255,0.12)]",
                     ].join(" ")}
                   >
-                    {/* 光るライン */}
                     <span
                       className={[
                         "absolute inset-x-0 top-0 h-[2px]",
