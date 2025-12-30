@@ -8,7 +8,7 @@
       "map": "gensokyo",
       "location": "scarlet_mansion"
     },
-    "participants": ["remilia", "flandre"],
+    "participants": ["remilia", "flandre", "sakuya"],
     "ui": {
       "chatBackground": "/background/group_scarlet_mansion.png",
       "label": "紅魔館",
