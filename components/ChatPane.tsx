@@ -172,7 +172,6 @@ export default function ChatPane({
           ヘッダー
          ========================= */}
       <header className="relative border-b border-white/10 px-6 py-4 backdrop-blur-md">
-        {/* ★ グループ accent */}
         {mode === "group" && groupContext?.ui?.accent && (
           <div
             className={cn(
@@ -182,7 +181,6 @@ export default function ChatPane({
           />
         )}
 
-        {/* 単体キャラ accent */}
         {mode === "single" && character.color?.accent && (
           <div
             className={cn(
@@ -222,6 +220,10 @@ export default function ChatPane({
                 ? speakerMap.get(msg.speakerId)
                 : null;
 
+            const displayContent = !isUser
+              ? msg.content.replace(/\\n/g, "\n")
+              : msg.content;
+
             return (
               <div
                 key={msg.id}
@@ -239,13 +241,13 @@ export default function ChatPane({
 
                   <div
                     className={cn(
-                      "gensou-card rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                      "gensou-card rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap",
                       isUser
                         ? "chat-user rounded-br-none"
                         : "chat-ai rounded-bl-none"
                     )}
                   >
-                    {msg.content}
+                    {displayContent}
                   </div>
                 </div>
               </div>
