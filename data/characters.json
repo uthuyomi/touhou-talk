@@ -12,7 +12,7 @@
     },
     "ui": {
       "chatBackground": "/background/reimu.png",
-      "placeholder": "霊夢に話しかける"
+      "placeholder": "話しかける"
     }
   },
 
@@ -29,7 +29,7 @@
     },
     "ui": {
       "chatBackground": "/background/marisa.png",
-      "placeholder": "魔理沙に話しかける"
+      "placeholder": "話しかける"
     }
   },
 
@@ -46,7 +46,7 @@
     },
     "ui": {
       "chatBackground": "/background/arisu.png",
-      "placeholder": "アリスに話しかける"
+      "placeholder": "話しかける"
     }
   },
 
@@ -63,7 +63,7 @@
     },
     "ui": {
       "chatBackground": "/background/aya.png",
-      "placeholder": "文に話しかける"
+      "placeholder": "話しかける"
     }
   },
   "momiji": {
@@ -79,7 +79,7 @@
     },
     "ui": {
       "chatBackground": "/background/momiji.png",
-      "placeholder": "椛に話しかける"
+      "placeholder": "話しかける"
     }
   },
   "youmu": {
@@ -95,7 +95,7 @@
     },
     "ui": {
       "chatBackground": "/background/youmu.png",
-      "placeholder": "妖夢に話しかける"
+      "placeholder": "話しかける"
     }
   },
   "remilia": {
@@ -111,7 +111,7 @@
     },
     "ui": {
       "chatBackground": "/background/remilia.png",
-      "placeholder": "レミリアに話しかける"
+      "placeholder": "話しかける"
     }
   },
   "sakuya": {
@@ -127,7 +127,7 @@
   },
   "ui": {
     "chatBackground": "/background/sakuya.png",
-    "placeholder": "咲夜に話しかける"
+    "placeholder": "話しかける"
   }
 }
 ,
@@ -144,7 +144,7 @@
     },
     "ui": {
       "chatBackground": "/background/flandre.png",
-      "placeholder": "フランドールに話しかける"
+      "placeholder": "話しかける"
     }
   },
   "satori": {
@@ -160,7 +160,7 @@
     },
     "ui": {
       "chatBackground": "/background/satori.png",
-      "placeholder": "さとりに話しかける"
+      "placeholder": "話しかける"
     }
   },
   "koishi": {
@@ -176,7 +176,7 @@
     },
     "ui": {
       "chatBackground": "/background/koishi.png",
-      "placeholder": "こいしに話しかける"
+      "placeholder": "話しかける"
     }
   }
 }
